@@ -222,9 +222,21 @@ export const getBlogs = async (req, res) => {
 export const getBlogBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    const blog = await Blog.findOne({ slug })
-      .populate('author', 'name profileImage bio followers')
-      .populate('collaborators', 'name profileImage email');
+    let blog;
+
+    // Check if slug is a valid MongoDB ObjectId
+    if (slug && /^[0-9a-fA-F]{24}$/.test(slug)) {
+      blog = await Blog.findById(slug)
+        .populate('author', 'name profileImage bio followers')
+        .populate('collaborators', 'name profileImage email');
+    }
+
+    // Fall back to slug lookup if not found or not an ObjectId
+    if (!blog) {
+      blog = await Blog.findOne({ slug })
+        .populate('author', 'name profileImage bio followers')
+        .populate('collaborators', 'name profileImage email');
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found.' });
