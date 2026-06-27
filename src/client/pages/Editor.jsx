@@ -93,6 +93,21 @@ const parseHTMLToBlocks = (html) => {
   return blocks;
 };
 
+const parseInlineMarkdown = (text) => {
+  if (!text) return '';
+  // Clean up any leading list bullet/dash if it somehow slipped through
+  let cleanText = text.trim().replace(/^[\*\-\•]\s*/, '');
+  
+  // Parse markdown bold (**text**) into HTML/React bold elements
+  const parts = cleanText.split('**');
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return <strong key={index} className="font-bold">{part}</strong>;
+    }
+    return part;
+  });
+};
+
 const renderBlogPreview = (contentString) => {
   if (!contentString) return <p className="text-slate-400 italic">No content written yet.</p>;
   try {
@@ -103,13 +118,13 @@ const renderBlogPreview = (contentString) => {
           {blocks.map((block) => {
             switch (block.type) {
               case 'h1':
-                return <h1 key={block.id} className={`text-3xl mt-8 mb-4 text-slate-900 dark:text-white ${block.bold === false ? 'font-normal' : 'font-extrabold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</h1>;
+                return <h1 key={block.id} className={`text-3xl mt-8 mb-4 text-slate-900 dark:text-white ${block.bold === false ? 'font-normal' : 'font-extrabold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(block.content)}</h1>;
               case 'h2':
-                return <h2 key={block.id} className={`text-2xl mt-6 mb-3 text-slate-800 dark:text-slate-100 ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</h2>;
+                return <h2 key={block.id} className={`text-2xl mt-6 mb-3 text-slate-800 dark:text-slate-100 ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(block.content)}</h2>;
               case 'p':
-                return <p key={block.id} className={`text-slate-700 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</p>;
+                return <p key={block.id} className={`text-slate-700 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(block.content)}</p>;
               case 'quote':
-                return <blockquote key={block.id} className={`border-l-4 border-primary-500 pl-4 my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic === false ? 'not-italic' : 'italic'} ${block.underline ? 'underline' : ''}`}>{block.content}</blockquote>;
+                return <blockquote key={block.id} className={`border-l-4 border-primary-500 pl-4 my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic === false ? 'not-italic' : 'italic'} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(block.content)}</blockquote>;
               case 'code':
                 return (
                   <div key={block.id} className="relative my-6 rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-800 bg-slate-950 dark:bg-slate-900/40 text-slate-800 dark:text-slate-200 font-mono text-sm shadow-inner">
@@ -121,7 +136,7 @@ const renderBlogPreview = (contentString) => {
                 return (
                   <div key={block.id} className="bg-primary-50/50 border border-primary-100 dark:bg-primary-950/20 dark:border-primary-900/30 p-4 rounded-2xl flex gap-3.5 my-5">
                     <span className="text-2xl select-none" role="img">{block.icon || '💡'}</span>
-                    <div className={`text-slate-700 dark:text-slate-300 leading-relaxed text-sm whitespace-pre-wrap ${block.bold === false ? 'font-normal' : 'font-semibold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</div>
+                    <div className={`text-slate-700 dark:text-slate-300 leading-relaxed text-sm whitespace-pre-wrap ${block.bold === false ? 'font-normal' : 'font-semibold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(block.content)}</div>
                   </div>
                 );
               case 'image':
@@ -137,7 +152,7 @@ const renderBlogPreview = (contentString) => {
                 return (
                   <ul key={block.id} className="list-disc pl-6 space-y-1.5 my-4">
                     {block.content.split('\n').filter(Boolean).map((item, idx) => (
-                      <li key={idx} className={`text-slate-700 dark:text-slate-300 text-base leading-relaxed ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{item}</li>
+                      <li key={idx} className={`text-slate-700 dark:text-slate-300 text-base leading-relaxed ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{parseInlineMarkdown(item)}</li>
                     ))}
                   </ul>
                 );

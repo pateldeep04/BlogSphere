@@ -641,7 +641,63 @@ const generateGeminiBlog = async (topic) => {
   if (cleanText.startsWith('```')) {
     cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
   }
-  return JSON.parse(cleanText);
+  const parsed = JSON.parse(cleanText);
+  if (parsed && parsed.blocks && Array.isArray(parsed.blocks)) {
+    parsed.blocks = parsed.blocks.map(block => {
+      if (block.type === 'list' && typeof block.content === 'string') {
+        block.content = block.content
+          .split('\n')
+          .map(line => line.trim().replace(/^[\*\-\•]\s*/, ''))
+          .join('\n');
+      }
+      return block;
+    });
+  }
+  return parsed;
+};
+
+// Fallback Mock Blog Generator when Gemini API is rate-limited or offline
+const generateMockBlog = (topic) => {
+  const cleanTopic = topic.trim();
+  const title = `Exploring ${cleanTopic}: A Comprehensive Guide`;
+  const blocks = [
+    {
+      id: `h1-mock-${Date.now()}-1`,
+      type: 'h1',
+      content: `Introduction to ${cleanTopic}`
+    },
+    {
+      id: `p-mock-${Date.now()}-2`,
+      type: 'p',
+      content: `This article provides an in-depth overview of ${cleanTopic}. Understanding this subject is crucial for developers and enthusiasts alike, as it represents a core pillar of modern digital solutions. As technology evolves, staying informed on topics like ${cleanTopic} helps professionals maintain a competitive edge and build more robust architectures.`
+    },
+    {
+      id: `h2-mock-${Date.now()}-3`,
+      type: 'h2',
+      content: `Key Concepts and Principles of ${cleanTopic}`
+    },
+    {
+      id: `p-mock-${Date.now()}-4`,
+      type: 'p',
+      content: `When delving into ${cleanTopic}, there are several fundamental principles to consider. First, it requires a solid understanding of how different components interface with each other. Second, performance and scalability must be factored in early in the design cycle. Adhering to these standards ensures clean, maintainable systems.`
+    },
+    {
+      id: `quote-mock-${Date.now()}-5`,
+      type: 'quote',
+      content: `"${cleanTopic} is not just a technology or methodology—it's a mindset that shapes how we solve complex problems in modern development."`
+    },
+    {
+      id: `list-mock-${Date.now()}-6`,
+      type: 'list',
+      content: `Core benefit 1: Rapid integration and adaptability\nCore benefit 2: High efficiency and minimized developer overhead\nCore benefit 3: Scalability ready for production deployments`
+    },
+    {
+      id: `p-mock-${Date.now()}-7`,
+      type: 'p',
+      content: `In conclusion, ${cleanTopic} plays an essential role in today's software landscape. By leveraging these concepts, teams can build fast, secure, and highly reliable applications. As you continue exploring this topic, focus on practical implementations and iterative improvements.`
+    }
+  ];
+  return { title, blocks };
 };
 
 export const generateAIBlogContent = async (req, res) => {
@@ -651,8 +707,14 @@ export const generateAIBlogContent = async (req, res) => {
       return res.status(400).json({ error: 'Topic is required to generate content.' });
     }
 
-    const generated = await generateGeminiBlog(topic);
-    res.status(200).json({ title: generated.title, blocks: generated.blocks });
+    try {
+      const generated = await generateGeminiBlog(topic);
+      res.status(200).json({ title: generated.title, blocks: generated.blocks });
+    } catch (apiError) {
+      console.warn(`[WARN] Gemini API failed (${apiError.message}). Falling back to mock generator.`);
+      const fallbackData = generateMockBlog(topic);
+      res.status(200).json({ title: fallbackData.title, blocks: fallbackData.blocks, fallback: true });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
