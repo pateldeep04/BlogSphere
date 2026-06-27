@@ -36,10 +36,13 @@ const summarizeContent = (htmlContent) => {
     cleanText = htmlContent.replace(/<[^>]*>/g, ' ');
   }
   const text = cleanText.replace(/\s+/g, ' ').trim();
-  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 10);
+  let sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 1);
+  if (sentences.length === 0 && text.length > 0) {
+    sentences = [text];
+  }
   
   // Create a 30-second summary (first 3 sentences)
-  const summary = sentences.slice(0, 3).join('. ') + '.';
+  const summary = sentences.length > 0 ? (sentences.slice(0, 3).join('. ') + '.') : 'No content available to summarize.';
   
   // Extract 5 key points based on length / distinct sentences
   const keyPoints = [];
