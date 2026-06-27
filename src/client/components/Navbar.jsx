@@ -30,10 +30,10 @@ export default function Navbar() {
   // Sync theme
   useEffect(() => {
     if (darkMode) {
-      document.body.classList.add('dark');
+      document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
-      document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);

@@ -5,7 +5,7 @@ import {
   Save, Send, Eye, PenTool, Users, Plus, X, Search, 
   UserCheck, Edit3, Heading1, Heading2, List, Trash2, 
   Copy, ArrowUp, ArrowDown, GripVertical, AlignLeft, 
-  Quote, Code, Image, Lightbulb 
+  Quote, Code, Image, Lightbulb, LayoutGrid, Settings2, Sparkles
 } from 'lucide-react';
 import api from '../utils/api.js';
 import socket from '../utils/socket.js';
@@ -103,13 +103,13 @@ const renderBlogPreview = (contentString) => {
           {blocks.map((block) => {
             switch (block.type) {
               case 'h1':
-                return <h1 key={block.id} className="text-3xl font-extrabold text-slate-900 dark:text-white mt-8 mb-4">{block.content}</h1>;
+                return <h1 key={block.id} className={`text-3xl mt-8 mb-4 text-slate-900 dark:text-white ${block.bold === false ? 'font-normal' : 'font-extrabold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</h1>;
               case 'h2':
-                return <h2 key={block.id} className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-6 mb-3">{block.content}</h2>;
+                return <h2 key={block.id} className={`text-2xl mt-6 mb-3 text-slate-800 dark:text-slate-100 ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</h2>;
               case 'p':
-                return <p key={block.id} className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">{block.content}</p>;
+                return <p key={block.id} className={`text-slate-700 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</p>;
               case 'quote':
-                return <blockquote key={block.id} className="border-l-4 border-primary-500 pl-4 italic my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl">{block.content}</blockquote>;
+                return <blockquote key={block.id} className={`border-l-4 border-primary-500 pl-4 my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic === false ? 'not-italic' : 'italic'} ${block.underline ? 'underline' : ''}`}>{block.content}</blockquote>;
               case 'code':
                 return (
                   <div key={block.id} className="relative my-6 rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-800 bg-slate-950 dark:bg-slate-900/40 text-slate-800 dark:text-slate-200 font-mono text-sm shadow-inner">
@@ -121,7 +121,7 @@ const renderBlogPreview = (contentString) => {
                 return (
                   <div key={block.id} className="bg-primary-50/50 border border-primary-100 dark:bg-primary-950/20 dark:border-primary-900/30 p-4 rounded-2xl flex gap-3.5 my-5">
                     <span className="text-2xl select-none" role="img">{block.icon || '💡'}</span>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">{block.content}</div>
+                    <div className={`text-slate-700 dark:text-slate-300 leading-relaxed text-sm whitespace-pre-wrap ${block.bold === false ? 'font-normal' : 'font-semibold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{block.content}</div>
                   </div>
                 );
               case 'image':
@@ -137,7 +137,7 @@ const renderBlogPreview = (contentString) => {
                 return (
                   <ul key={block.id} className="list-disc pl-6 space-y-1.5 my-4">
                     {block.content.split('\n').filter(Boolean).map((item, idx) => (
-                      <li key={idx} className="text-slate-700 dark:text-slate-300 text-base leading-relaxed">{item}</li>
+                      <li key={idx} className={`text-slate-700 dark:text-slate-300 text-base leading-relaxed ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>{item}</li>
                     ))}
                   </ul>
                 );
@@ -188,6 +188,45 @@ export default function Editor() {
 
   // Drag and drop states
   const [draggedIndex, setDraggedIndex] = useState(null);
+
+  // Zoom & View adjustment states
+  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+  const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [editorZoom, setEditorZoom] = useState(100);
+  const [activeBlockIndex, setActiveBlockIndex] = useState(null);
+
+  // AI Write states
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleGenerateAI = async () => {
+    if (!aiTopic.trim()) return;
+    setGeneratingAI(true);
+    setAiError('');
+    try {
+      const res = await api.post('/api/blogs/generate-ai', { topic: aiTopic });
+      setTitle(res.data.title);
+      setBlocks(res.data.blocks);
+      setAiModalOpen(false);
+      setAiTopic('');
+      // Trigger a socket sync if in multi-author session
+      if (socket && blogId) {
+        socket.emit('edit_blog', { blogId, title: res.data.title, content: JSON.stringify(res.data.blocks) });
+      }
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch (err) {
+      console.error(err);
+      setAiError(err.response?.data?.error || 'Failed to generate AI blog.');
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
 
   // Redirect if not logged in
   useEffect(() => {
@@ -559,6 +598,93 @@ export default function Editor() {
         <main className="flex-1 space-y-6">
           {editorMode === 'edit' ? (
             <div className="space-y-6">
+              {/* Zoom & View Settings Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+                    className={`p-2 rounded-xl border transition-all ${
+                      showLeftSidebar 
+                        ? 'bg-primary-50 border-primary-100 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold' 
+                        : 'bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 text-slate-500'
+                    }`}
+                    title={showLeftSidebar ? "Hide Block Palette" : "Show Block Palette"}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowRightSidebar(!showRightSidebar)}
+                    className={`p-2 rounded-xl border transition-all ${
+                      showRightSidebar 
+                        ? 'bg-primary-50 border-primary-100 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold' 
+                        : 'bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 text-slate-500'
+                    }`}
+                    title={showRightSidebar ? "Hide Settings Sidebar" : "Show Settings Sidebar"}
+                  >
+                    <Settings2 className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 select-none">
+                    Toggle sidebars
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAiModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl border border-primary-200 bg-primary-50/50 hover:bg-primary-50 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold text-xs transition-colors shadow-sm"
+                    title="Write complete article using Gemini AI"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-primary-500 animate-pulse" />
+                    <span>Write with AI</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950/40 px-3.5 py-1.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-400 uppercase select-none">Zoom:</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditorZoom(Math.max(80, editorZoom - 10))}
+                    className="px-2 py-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 font-bold text-xs"
+                    title="Zoom Out"
+                  >
+                    A-
+                  </button>
+                  <input
+                    type="range"
+                    min="80"
+                    max="200"
+                    step="10"
+                    value={editorZoom}
+                    onChange={(e) => setEditorZoom(Number(e.target.value))}
+                    className="w-24 accent-primary-500 cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditorZoom(Math.min(200, editorZoom + 10))}
+                    className="px-2 py-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 font-bold text-xs"
+                    title="Zoom In"
+                  >
+                    A+
+                  </button>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 min-w-[40px] text-right">
+                    {editorZoom}%
+                  </span>
+                  {editorZoom !== 100 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditorZoom(100)}
+                      className="text-[10px] text-primary-500 hover:underline font-bold"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Cover Image URL input */}
               <input
                 type="text"
@@ -580,44 +706,46 @@ export default function Editor() {
               {/* Drag and Drop Canvas Layout */}
               <div className="flex flex-col md:flex-row gap-6 items-start mt-4">
                 {/* Block Palette Panel */}
-                <div className="w-full md:w-56 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 p-4 rounded-3xl sticky top-24 space-y-4">
-                  <h4 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Add Blocks</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
-                    {[
-                      { type: 'h1', label: 'Heading 1', icon: Heading1, desc: 'Large title', color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/20' },
-                      { type: 'h2', label: 'Heading 2', icon: Heading2, desc: 'Subheading', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/20' },
-                      { type: 'p', label: 'Paragraph', icon: AlignLeft, desc: 'Plain text body', color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/20' },
-                      { type: 'quote', label: 'Quote Box', icon: Quote, desc: 'Highlighted quote', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' },
-                      { type: 'list', label: 'Bullet List', icon: List, desc: 'Itemized list', color: 'text-violet-500 bg-violet-50 dark:bg-violet-950/20' },
-                      { type: 'callout', label: 'Callout Box', icon: Lightbulb, desc: 'Key tip box', color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-950/20' },
-                      { type: 'image', label: 'Image URL', icon: Image, desc: 'Paste image link', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/20' },
-                      { type: 'code', label: 'Code Block', icon: Code, desc: 'Developer syntax', color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/20' }
-                    ].map((item) => {
-                      const IconComponent = item.icon;
-                      return (
-                        <div
-                          key={item.type}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('newBlockType', item.type);
-                            e.dataTransfer.effectAllowed = 'copy';
-                          }}
-                          onClick={() => addBlock(item.type)}
-                          className="flex items-center gap-2.5 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-grab active:cursor-grabbing hover:border-primary-500/50 transition-all select-none text-left group"
-                          title="Drag to canvas or click to append"
-                        >
-                          <div className={`p-2 rounded-xl ${item.color} group-hover:scale-105 transition-all duration-300`}>
-                            <IconComponent className="w-3.5 h-3.5" />
+                {showLeftSidebar && (
+                  <div className="w-full md:w-56 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 p-4 rounded-3xl sticky top-24 space-y-4">
+                    <h4 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Add Blocks</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
+                      {[
+                        { type: 'h1', label: 'Heading 1', icon: Heading1, desc: 'Large title', color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/20' },
+                        { type: 'h2', label: 'Heading 2', icon: Heading2, desc: 'Subheading', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/20' },
+                        { type: 'p', label: 'Paragraph', icon: AlignLeft, desc: 'Plain text body', color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/20' },
+                        { type: 'quote', label: 'Quote Box', icon: Quote, desc: 'Highlighted quote', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' },
+                        { type: 'list', label: 'Bullet List', icon: List, desc: 'Itemized list', color: 'text-violet-500 bg-violet-50 dark:bg-violet-950/20' },
+                        { type: 'callout', label: 'Callout Box', icon: Lightbulb, desc: 'Key tip box', color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-950/20' },
+                        { type: 'image', label: 'Image URL', icon: Image, desc: 'Paste image link', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/20' },
+                        { type: 'code', label: 'Code Block', icon: Code, desc: 'Developer syntax', color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/20' }
+                      ].map((item) => {
+                        const IconComponent = item.icon;
+                        return (
+                          <div
+                            key={item.type}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('newBlockType', item.type);
+                              e.dataTransfer.effectAllowed = 'copy';
+                            }}
+                            onClick={() => addBlock(item.type)}
+                            className="flex items-center gap-2.5 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-grab active:cursor-grabbing hover:border-primary-500/50 transition-all select-none text-left group"
+                            title="Drag to canvas or click to append"
+                          >
+                            <div className={`p-2 rounded-xl ${item.color} group-hover:scale-105 transition-all duration-300`}>
+                              <IconComponent className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200">{item.label}</span>
+                              <span className="block text-[8px] text-slate-400 font-semibold">{item.desc}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200">{item.label}</span>
-                            <span className="block text-[8px] text-slate-400 font-semibold">{item.desc}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Editor Canvas Drop Zone */}
                 <div className="flex-1 w-full space-y-4">
@@ -676,22 +804,42 @@ export default function Editor() {
                         {/* Block Content Inputs */}
                         <div className="flex-1 min-w-0">
                           {block.type === 'h1' && (
-                            <input
-                              type="text"
+                            <textarea
                               value={block.content}
-                              onChange={(e) => updateBlockProperty(index, 'content', e.target.value)}
+                              onChange={(e) => {
+                                updateBlockProperty(index, 'content', e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                              }}
+                              onFocus={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                                setActiveBlockIndex(index);
+                              }}
+                              rows={1}
                               placeholder="Heading 1..."
-                              className="w-full text-2xl font-extrabold text-slate-900 dark:text-white bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700"
+                              className={`w-full bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none overflow-hidden text-slate-900 dark:text-white ${block.bold === false ? 'font-normal' : 'font-extrabold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}
+                              style={{ fontSize: `${(24 * editorZoom) / 100}px` }}
                             />
                           )}
 
                           {block.type === 'h2' && (
-                            <input
-                              type="text"
+                            <textarea
                               value={block.content}
-                              onChange={(e) => updateBlockProperty(index, 'content', e.target.value)}
+                              onChange={(e) => {
+                                updateBlockProperty(index, 'content', e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                              }}
+                              onFocus={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                                setActiveBlockIndex(index);
+                              }}
+                              rows={1}
                               placeholder="Heading 2..."
-                              className="w-full text-xl font-bold text-slate-800 dark:text-slate-100 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700"
+                              className={`w-full bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none overflow-hidden text-slate-800 dark:text-slate-100 ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}
+                              style={{ fontSize: `${(20 * editorZoom) / 100}px` }}
                             />
                           )}
 
@@ -706,10 +854,12 @@ export default function Editor() {
                               onFocus={(e) => {
                                 e.target.style.height = 'auto';
                                 e.target.style.height = e.target.scrollHeight + 'px';
+                                setActiveBlockIndex(index);
                               }}
                               rows={2}
                               placeholder="Start typing paragraph text..."
-                              className="w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none leading-relaxed text-sm font-medium"
+                              className={`w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none leading-relaxed font-medium ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}
+                              style={{ fontSize: `${(14 * editorZoom) / 100}px` }}
                             />
                           )}
 
@@ -725,10 +875,12 @@ export default function Editor() {
                                 onFocus={(e) => {
                                   e.target.style.height = 'auto';
                                   e.target.style.height = e.target.scrollHeight + 'px';
+                                  setActiveBlockIndex(index);
                                 }}
                                 rows={2}
                                 placeholder="Paste a striking quote here..."
-                                className="w-full text-slate-600 dark:text-slate-400 italic bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-400 dark:placeholder-slate-700 resize-none text-sm font-medium leading-relaxed"
+                                className={`w-full text-slate-600 dark:text-slate-400 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-400 dark:placeholder-slate-700 resize-none font-medium leading-relaxed ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic === false ? 'not-italic' : 'italic'} ${block.underline ? 'underline' : ''}`}
+                                style={{ fontSize: `${(14 * editorZoom) / 100}px` }}
                               />
                             </div>
                           )}
@@ -746,10 +898,12 @@ export default function Editor() {
                                 onFocus={(e) => {
                                   e.target.style.height = 'auto';
                                   e.target.style.height = e.target.scrollHeight + 'px';
+                                  setActiveBlockIndex(index);
                                 }}
                                 rows={3}
                                 placeholder="Enter items (one item per line)..."
-                                className="w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none text-sm font-medium leading-relaxed"
+                                className={`w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 resize-none leading-relaxed font-medium ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}
+                                style={{ fontSize: `${(14 * editorZoom) / 100}px` }}
                               />
                             </div>
                           )}
@@ -770,8 +924,10 @@ export default function Editor() {
                                 type="text"
                                 value={block.content}
                                 onChange={(e) => updateBlockProperty(index, 'content', e.target.value)}
+                                onFocus={() => setActiveBlockIndex(index)}
                                 placeholder="Important warning / key tip highlight..."
-                                className="w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-sm font-semibold"
+                                className={`w-full text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:outline-none focus:ring-0 font-semibold ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}
+                                style={{ fontSize: `${(14 * editorZoom) / 100}px` }}
                               />
                             </div>
                           )}
@@ -812,7 +968,7 @@ export default function Editor() {
                           )}
 
                           {block.type === 'code' && (
-                            <div className="relative rounded-xl overflow-hidden border border-slate-200/60 dark:border-slate-800 bg-slate-950 text-slate-200 font-mono text-xs shadow-inner">
+                            <div className="relative rounded-xl overflow-hidden border border-slate-200/60 dark:border-slate-800 bg-slate-950 text-slate-200 font-mono shadow-inner" style={{ fontSize: `${(12 * editorZoom) / 100}px` }}>
                               <div className="flex items-center justify-between px-3.5 py-1 bg-slate-900 border-b border-slate-200/50 dark:border-slate-800">
                                 <select
                                   value={block.language || 'javascript'}
@@ -843,8 +999,55 @@ export default function Editor() {
                           )}
                         </div>
 
-                        {/* Block Action Buttons on Hover */}
-                        <div className="opacity-0 group-hover:opacity-100 flex items-start gap-1 transition-opacity duration-200 select-none flex-shrink-0">
+                        {/* Block Action Buttons on Hover/Focus */}
+                        <div className={`flex items-start gap-1 transition-opacity duration-200 select-none flex-shrink-0 ${
+                          activeBlockIndex === index ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}>
+                          {/* Formatting Controls for Text Blocks */}
+                          {['h1', 'h2', 'p', 'quote', 'list', 'callout'].includes(block.type) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const isBold = block.bold !== undefined ? block.bold : ['h1', 'h2', 'callout'].includes(block.type);
+                                  updateBlockProperty(index, 'bold', !isBold);
+                                }}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  (block.bold !== undefined ? block.bold : ['h1', 'h2', 'callout'].includes(block.type))
+                                    ? 'bg-primary-50 border-primary-100 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold' 
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600'
+                                }`}
+                                title="Toggle Bold"
+                              >
+                                <span className="font-bold text-xs">B</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateBlockProperty(index, 'italic', !block.italic)}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  block.italic 
+                                    ? 'bg-primary-50 border-primary-100 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold' 
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600'
+                                }`}
+                                title="Toggle Italic"
+                              >
+                                <span className="italic text-xs font-serif font-bold">I</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateBlockProperty(index, 'underline', !block.underline)}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  block.underline 
+                                    ? 'bg-primary-50 border-primary-100 text-primary-600 dark:bg-primary-950/20 dark:border-primary-900/30 dark:text-primary-400 font-bold' 
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600'
+                                }`}
+                                title="Toggle Underline"
+                              >
+                                <span className="underline text-xs font-bold">U</span>
+                              </button>
+                              <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-800 mx-1 align-middle self-center"></div>
+                            </>
+                          )}
                           <button
                             type="button"
                             onClick={() => duplicateBlock(index)}
@@ -878,94 +1081,163 @@ export default function Editor() {
         </main>
 
         {/* Sidebar Configuration Parameters */}
-        <aside className="w-full lg:w-72 flex flex-col gap-6">
-          {/* Metadata configurations */}
-          <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
-            <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Post Settings</h3>
-            
-            {/* Tags configurators */}
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tags</label>
-              <input
-                type="text"
-                placeholder="Add tags (press Enter)..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleAddTag}
-                className="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none mb-3"
-              />
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag, idx) => (
-                  <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
-                    <span>#{tag}</span>
-                    <button type="button" onClick={() => handleRemoveTag(idx)} className="hover:text-rose-500"><X className="w-3 h-3" /></button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Collaborators setup */}
-          <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
-            <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-500" />
-              <span>Collaborators</span>
-            </h3>
-
-            {/* Existing Collaborators list */}
-            <div className="flex flex-col gap-2.5 mb-4">
-              {collaborators.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No editors added yet. Add peers to write together.</p>
-              ) : (
-                collaborators.map((collab) => (
-                  <div key={collab._id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border">
-                    <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 rounded-full bg-primary-500 text-white font-bold text-[9px] flex items-center justify-center">
-                        {collab.name.substring(0, 2).toUpperCase()}
-                      </span>
-                      <div>
-                        <span className="block text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{collab.name}</span>
-                        <span className="block text-[8px] text-slate-400 truncate max-w-[120px]">{collab.email}</span>
-                      </div>
-                    </div>
-                    <button onClick={() => removeCollaborator(collab._id)} className="text-slate-400 hover:text-rose-500 p-1"><X className="w-3.5 h-3.5" /></button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Add Collaborator via email search simulated list */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search authors..."
-                value={searchUserQuery}
-                onChange={(e) => handleUserSearch(e.target.value)}
-                className="w-full px-3 py-2 pl-8 text-xs border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none"
-              />
-              <Search className="absolute w-3.5 h-3.5 text-slate-400 top-2.5 left-2.5" />
-
-              {userSearchResults.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 border rounded-xl shadow-lg bg-white dark:bg-slate-900 max-h-40 overflow-y-auto z-10 p-1.5 border-slate-200/50 dark:border-slate-800">
-                  {userSearchResults.map((usr) => (
-                    <div
-                      key={usr._id}
-                      onClick={() => addCollaborator(usr)}
-                      className="p-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer flex justify-between items-center"
-                    >
-                      <div>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 block">{usr.name}</span>
-                        <span className="text-[9px] text-slate-400">{usr.email}</span>
-                      </div>
-                      <Plus className="w-3 h-3 text-primary-500" />
-                    </div>
+        {showRightSidebar && (
+          <aside className="w-full lg:w-72 flex flex-col gap-6">
+            {/* Metadata configurations */}
+            <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
+              <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Post Settings</h3>
+              
+              {/* Tags configurators */}
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tags</label>
+                <input
+                  type="text"
+                  placeholder="Add tags (press Enter)..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  className="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none mb-3"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag, idx) => (
+                    <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                      <span>#{tag}</span>
+                      <button type="button" onClick={() => handleRemoveTag(idx)} className="hover:text-rose-500"><X className="w-3 h-3" /></button>
+                    </span>
                   ))}
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* Collaborators setup */}
+            <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
+              <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-500" />
+                <span>Collaborators</span>
+              </h3>
+
+              {/* Existing Collaborators list */}
+              <div className="flex flex-col gap-2.5 mb-4">
+                {collaborators.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No editors added yet. Add peers to write together.</p>
+                ) : (
+                  collaborators.map((collab) => (
+                    <div key={collab._id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border">
+                      <div className="flex items-center gap-2">
+                        <span className="h-6 w-6 rounded-full bg-primary-500 text-white font-bold text-[9px] flex items-center justify-center">
+                          {collab.name.substring(0, 2).toUpperCase()}
+                        </span>
+                        <div>
+                          <span className="block text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{collab.name}</span>
+                          <span className="block text-[8px] text-slate-400 truncate max-w-[120px]">{collab.email}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => removeCollaborator(collab._id)} className="text-slate-400 hover:text-rose-500 p-1"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add Collaborator via email search simulated list */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search authors..."
+                  value={searchUserQuery}
+                  onChange={(e) => handleUserSearch(e.target.value)}
+                  className="w-full px-3 py-2 pl-8 text-xs border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none"
+                />
+                <Search className="absolute w-3.5 h-3.5 text-slate-400 top-2.5 left-2.5" />
+
+                {userSearchResults.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 border rounded-xl shadow-lg bg-white dark:bg-slate-900 max-h-40 overflow-y-auto z-10 p-1.5 border-slate-200/50 dark:border-slate-800">
+                    {userSearchResults.map((usr) => (
+                      <div
+                        key={usr._id}
+                        onClick={() => addCollaborator(usr)}
+                        className="p-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer flex justify-between items-center"
+                      >
+                        <div>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 block">{usr.name}</span>
+                          <span className="text-[9px] text-slate-400">{usr.email}</span>
+                        </div>
+                        <Plus className="w-3 h-3 text-primary-500" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* AI Writer Modal */}
+      {aiModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary-500 animate-pulse" />
+                <span>Write Article with AI</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">
+              Provide a topic or a brief prompt, and our Gemini AI Assistant will outline and write a structured, publish-ready article containing headings, code snippets, lists, and quotes.
+            </p>
+            {aiError && (
+              <div className="p-3 text-xs bg-rose-50 border border-rose-100 text-rose-600 rounded-xl dark:bg-rose-950/20 dark:border-rose-900/30 dark:text-rose-400">
+                {aiError}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase">Topic / Description</label>
+              <textarea
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                placeholder="e.g., A comprehensive guide to React Hooks and clean code state management..."
+                rows={3}
+                className="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(false)}
+                disabled={generatingAI}
+                className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateAI}
+                disabled={generatingAI || !aiTopic.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-primary-500/10 disabled:opacity-50"
+              >
+                {generatingAI ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>AI Writing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generate Draft</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
-        </aside>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,12 @@ export default function Auth() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [validated, setValidated] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -40,16 +46,52 @@ export default function Auth() {
     } else {
       setActiveTab('login');
     }
+    setErrors({ name: '', email: '', password: '' });
+    setValidated(false);
   }, [searchParams, location.pathname]);
+
+  const validateForm = () => {
+    const tempErrors = { name: '', email: '', password: '' };
+    let isValid = true;
+
+    if (activeTab === 'register' && !formData.name.trim()) {
+      tempErrors.name = 'Full name is required.';
+      isValid = false;
+    }
+
+    if (!formData.email.trim()) {
+      tempErrors.email = 'Email address is required.';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      tempErrors.email = 'Please enter a valid email address (e.g. name@example.com).';
+      isValid = false;
+    }
+
+    if (!formData.password) {
+      tempErrors.password = 'Password is required.';
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      tempErrors.password = 'Password must be at least 6 characters long.';
+      isValid = false;
+    }
+
+    setErrors(tempErrors);
+    setValidated(true);
+    return isValid;
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: '' });
     setLocalError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
+    if (!validateForm()) {
+      return;
+    }
     dispatch(authStart());
 
     try {
@@ -135,7 +177,7 @@ export default function Auth() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {activeTab === 'register' && (
             <>
               {/* Full Name */}
@@ -147,9 +189,16 @@ export default function Auth() {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Full name"
-                  className="w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100"
+                  className={`w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100 ${
+                    errors.name ? 'is-invalid border-rose-500' : (validated && !errors.name ? 'is-valid border-emerald-500' : '')
+                  }`}
                 />
                 <User className="absolute w-4 h-4 text-slate-400 top-3.5 left-3.5" />
+                {errors.name && (
+                  <div className="invalid-feedback text-start text-[11px] text-rose-500 mt-1 block">
+                    {errors.name}
+                  </div>
+                )}
               </div>
 
               {/* Bio (Optional) */}
@@ -176,9 +225,16 @@ export default function Auth() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Email address"
-              className="w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100"
+              className={`w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100 ${
+                errors.email ? 'is-invalid border-rose-500' : (validated && !errors.email ? 'is-valid border-emerald-500' : '')
+              }`}
             />
             <Mail className="absolute w-4 h-4 text-slate-400 top-3.5 left-3.5" />
+            {errors.email && (
+              <div className="invalid-feedback text-start text-[11px] text-rose-500 mt-1 block">
+                {errors.email}
+              </div>
+            )}
           </div>
 
           {/* Password */}
@@ -190,7 +246,9 @@ export default function Auth() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
-              className="w-full py-2.5 pl-10 pr-10 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100"
+              className={`w-full py-2.5 pl-10 pr-10 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100 ${
+                errors.password ? 'is-invalid border-rose-500' : (validated && !errors.password ? 'is-valid border-emerald-500' : '')
+              }`}
             />
             <Lock className="absolute w-4 h-4 text-slate-400 top-3.5 left-3.5" />
             <button
@@ -200,6 +258,11 @@ export default function Auth() {
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
+            {errors.password && (
+              <div className="invalid-feedback text-start text-[11px] text-rose-500 mt-1 block">
+                {errors.password}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

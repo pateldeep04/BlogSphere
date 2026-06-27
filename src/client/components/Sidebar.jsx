@@ -51,7 +51,7 @@ export default function Sidebar({ currentCategory, currentTag }) {
             return (
               <Link
                 key={cat}
-                to={`/?category=${cat}`}
+                to={isActive ? '/' : `/?category=${cat}`}
                 className={`px-3 py-2 text-sm font-medium rounded-xl transition-colors flex justify-between items-center ${
                   isActive
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-950/20 dark:text-primary-400'
@@ -78,7 +78,7 @@ export default function Sidebar({ currentCategory, currentTag }) {
             return (
               <Link
                 key={tag}
-                to={`/?tag=${tag}`}
+                to={isActive ? '/' : `/?tag=${tag}`}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-full transition-all border ${
                   isActive
                     ? 'bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-500/10'

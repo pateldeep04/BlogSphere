@@ -13,6 +13,7 @@ import blogRoutes from './routes/blog';
 import commentRoutes from './routes/comment';
 import notificationRoutes from './routes/notification';
 import userRoutes from './routes/user';
+import Blog from './models/Blog';
 
 dotenv.config();
 
@@ -62,7 +63,15 @@ if (process.env.NODE_ENV === 'production') {
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/blog-sphere';
 mongoose
   .connect(MONGODB_URI)
-  .then(() => console.log('Successfully connected to MongoDB.'))
+  .then(async () => {
+    console.log('Successfully connected to MongoDB.');
+    try {
+      await Blog.updateMany({ summary: '.' }, { $set: { summary: '' } });
+      console.log('Successfully cleaned up any legacy dot summaries in the database.');
+    } catch (dbErr: any) {
+      console.error('Database cleanup warning:', dbErr.message);
+    }
+  })
   .catch((err: any) => {
     console.error('MongoDB connection error:', err.message);
     console.log('Please ensure local MongoDB is running, or set MONGODB_URI in .env');

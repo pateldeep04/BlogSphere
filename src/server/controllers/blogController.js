@@ -69,7 +69,7 @@ const generateGeminiSummary = async (title, contentText) => {
     throw new Error('GEMINI_API_KEY is not defined in environment variables.');
   }
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -193,8 +193,12 @@ export const getBlogs = async (req, res) => {
     if (tag) query.tags = tag;
     if (author) query.author = author;
     
-    // Default search for published posts
-    query.status = status || 'published';
+    // Filter by status if provided (and not 'all'). Default to 'published' if none provided
+    if (status && status !== 'all') {
+      query.status = status;
+    } else if (!status) {
+      query.status = 'published';
+    }
 
     if (search) {
       query.$or = [
@@ -573,6 +577,82 @@ export const restoreVersion = async (req, res) => {
     await blog.save();
 
     res.status(200).json({ message: 'Version restored successfully', blog });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Real AI full blog generation helper via Gemini API
+const generateGeminiBlog = async (topic) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not defined in environment variables.');
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              text: `You are an expert article writer. Write a comprehensive, high-quality, and engaging blog post about the topic: "${topic}".
+              
+              You MUST return a JSON object with this exact structure:
+              {
+                "title": "A catchy, SEO-friendly title of the blog post",
+                "blocks": [
+                  { "id": "h1-block-1", "type": "h1", "content": "Introduction to the topic" },
+                  { "id": "p-block-2", "type": "p", "content": "Write an engaging paragraph block here." },
+                  { "id": "h2-block-3", "type": "h2", "content": "Subheading of section 1" },
+                  { "id": "p-block-4", "type": "p", "content": "Write a detailed paragraph explaining details of section 1." },
+                  { "id": "quote-block-5", "type": "quote", "content": "An inspiring quote or callout related to the topic." },
+                  { "id": "list-block-6", "type": "list", "content": "Key point 1\\nKey point 2\\nKey point 3" },
+                  { "id": "p-block-7", "type": "p", "content": "A strong conclusion paragraph." }
+                ]
+              }
+
+              Write at least 6 blocks. Ensure they are structured logically. Do not include any markdown formatting wrappers or backticks, return ONLY the raw JSON object.`
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) {
+    throw new Error('Invalid response structure from Gemini API');
+  }
+
+  let cleanText = rawText.trim();
+  if (cleanText.startsWith('```')) {
+    cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+  }
+  return JSON.parse(cleanText);
+};
+
+export const generateAIBlogContent = async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic || topic.trim().length === 0) {
+      return res.status(400).json({ error: 'Topic is required to generate content.' });
+    }
+
+    const generated = await generateGeminiBlog(topic);
+    res.status(200).json({ title: generated.title, blocks: generated.blocks });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

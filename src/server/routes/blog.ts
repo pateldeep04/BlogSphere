@@ -10,7 +10,8 @@ import {
   generateSummary,
   translateBlog,
   getBlogVersions,
-  restoreVersion
+  restoreVersion,
+  generateAIBlogContent
 } from '../controllers/blogController';
 import { auth } from '../middleware/auth';
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get('/', getBlogs);
 router.get('/recommendations', auth, getRecommendations);
 router.get('/:slug', getBlogBySlug);
+router.post('/generate-ai', auth, generateAIBlogContent);
 router.post('/', auth, createBlog);
 router.put('/:id', auth, updateBlog);
 router.delete('/:id', auth, deleteBlog);

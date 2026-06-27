@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Eye, Heart, Clock, Volume2, Globe, Sparkles, History, Bookmark, MessageSquare, CornerDownRight, Play, Pause, Square, Trash2, ArrowLeft, Check, UserPlus, UserMinus } from 'lucide-react';
+import { Eye, Heart, Clock, Volume2, Globe, Sparkles, History, Bookmark, MessageSquare, CornerDownRight, Play, Pause, Square, Trash2, ArrowLeft, Check, UserPlus, UserMinus, X } from 'lucide-react';
 import api from '../utils/api.js';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,25 +18,25 @@ const renderBlogContent = (contentString) => {
             switch (block.type) {
               case 'h1':
                 return (
-                  <h1 key={block.id} className="text-3xl font-extrabold text-slate-900 dark:text-white mt-8 mb-4">
+                  <h1 key={block.id} className={`text-3xl mt-8 mb-4 text-slate-900 dark:text-white ${block.bold === false ? 'font-normal' : 'font-extrabold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>
                     {block.content}
                   </h1>
                 );
               case 'h2':
                 return (
-                  <h2 key={block.id} className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-6 mb-3">
+                  <h2 key={block.id} className={`text-2xl mt-6 mb-3 text-slate-800 dark:text-slate-100 ${block.bold === false ? 'font-normal' : 'font-bold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>
                     {block.content}
                   </h2>
                 );
               case 'p':
                 return (
-                  <p key={block.id} className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">
+                  <p key={block.id} className={`text-slate-700 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>
                     {block.content}
                   </p>
                 );
               case 'quote':
                 return (
-                  <blockquote key={block.id} className="border-l-4 border-primary-500 pl-4 italic my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl">
+                  <blockquote key={block.id} className={`border-l-4 border-primary-500 pl-4 my-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-r-2xl whitespace-pre-wrap ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic === false ? 'not-italic' : 'italic'} ${block.underline ? 'underline' : ''}`}>
                     {block.content}
                   </blockquote>
                 );
@@ -57,7 +57,7 @@ const renderBlogContent = (contentString) => {
                     <span className="text-2xl select-none animate-bounce" role="img" aria-label="callout icon">
                       {block.icon || '💡'}
                     </span>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                    <div className={`text-slate-700 dark:text-slate-300 leading-relaxed text-sm whitespace-pre-wrap ${block.bold === false ? 'font-normal' : 'font-semibold'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>
                       {block.content}
                     </div>
                   </div>
@@ -83,7 +83,7 @@ const renderBlogContent = (contentString) => {
                 return (
                   <ul key={block.id} className="list-disc pl-6 space-y-1.5 my-4">
                     {block.content.split('\n').filter(Boolean).map((item, idx) => (
-                      <li key={idx} className="text-slate-700 dark:text-slate-300 text-base leading-relaxed">
+                      <li key={idx} className={`text-slate-700 dark:text-slate-300 text-base leading-relaxed ${block.bold ? 'font-bold' : 'font-normal'} ${block.italic ? 'italic' : ''} ${block.underline ? 'underline' : ''}`}>
                         {item}
                       </li>
                     ))}
@@ -258,7 +258,7 @@ export default function BlogDetail() {
 
   // AI Summary Generator
   const handleGenerateSummary = async () => {
-    if (blog.summary) {
+    if (blog.summary && blog.summary !== '.') {
       setShowSummary(!showSummary);
       return;
     }
@@ -453,10 +453,14 @@ export default function BlogDetail() {
     );
   }
 
-  const isAuthorOrCollaborator = isAuthenticated && (
+  const isOwner = isAuthenticated && (
     blog.author?._id === user?._id ||
-    blog.collaborators?.some(c => c._id === user?._id) ||
     user?.role === 'admin'
+  );
+
+  const isAuthorOrCollaborator = isAuthenticated && (
+    isOwner ||
+    blog.collaborators?.some(c => c._id === user?._id)
   );
 
   return (
@@ -588,8 +592,18 @@ export default function BlogDetail() {
             </button>
           )}
 
+          {/* Owner edit button */}
+          {isOwner && (
+            <Link
+              to={`/editor?edit=${blog._id}`}
+              className="px-3.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-full text-xs shadow-md shadow-primary-500/10"
+            >
+              Edit
+            </Link>
+          )}
+
           {/* Collaborative edit button */}
-          {isAuthorOrCollaborator && (
+          {isAuthorOrCollaborator && !isOwner && (
             <Link
               to={`/editor?edit=${blog._id}`}
               className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-full text-xs dark:bg-indigo-950/20 dark:text-indigo-400"
