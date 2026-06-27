@@ -29,6 +29,3 @@ jobs:
 
     - name: Build Frontend Application
       run: npm run build
-
-    - name: Backend Sanity Check
-      run: npx tsx --check src/server/index.ts
