@@ -1517,3 +1517,51 @@ export const aiEnhanceBlock = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// AI DocTutor Draft Reviewer
+export const aiTutorReview = async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required.' });
+    }
+
+    let plainText = '';
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        plainText = parsed.map(b => b.content || '').join('\n');
+      }
+    } catch (e) {
+      plainText = content;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(200).json({ 
+        review: "**DocTutor Review Feedback:**\n\n1. 📖 **Draft Setup**: Great draft structure. Consider appending a brief summary at the end.\n2. ✍️ **Formatting**: Ensure you use H2 headings to segment sections.\n3. 💡 **Engagement**: Add some relevant tags to increase discoverability."
+      });
+    }
+
+    const prompt = `You are a professional writing tutor and editor named DocTutor. Analyze this draft:\nTitle: "${title || 'Untitled'}"\nContent:\n"${plainText}"\n\nProvide direct, practical, and highly constructive editing feedback, layout critique, and tips to make it more engaging. Format your response with standard markdown bold headers and numbered bullet lists. Return ONLY the review comments.`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Gemini API call failed');
+    }
+
+    const result = await response.json();
+    const review = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'Review complete. Content looks ready to publish!';
+
+    res.status(200).json({ review });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

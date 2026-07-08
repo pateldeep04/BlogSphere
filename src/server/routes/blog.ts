@@ -22,7 +22,8 @@ import {
   reportBlog,
   checkSpam,
   dismissReports,
-  aiEnhanceBlock
+  aiEnhanceBlock,
+  aiTutorReview
 } from '../controllers/blogController';
 import { auth, optionalAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
@@ -36,6 +37,7 @@ router.get('/flagged', auth, requireRole(['admin']), getFlaggedBlogs);
 router.post('/:id/dismiss-reports', auth, requireRole(['admin']), dismissReports);
 router.post('/check-spam', auth, checkSpam);
 router.post('/ai-enhance-block', auth, aiEnhanceBlock);
+router.post('/ai-tutor-review', auth, aiTutorReview);
 router.get('/:slug', getBlogBySlug);
 router.post('/:id/analytics', optionalAuth, updateBlogAnalytics);
 router.post('/:id/report', auth, reportBlog);

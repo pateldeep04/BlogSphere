@@ -158,6 +158,31 @@ server.listen(PORT, () => {
     }
   })();
 
+  // Create default admin user if not exists
+  (async () => {
+    try {
+      const User = (await import('./models/User.js')).default;
+      const bcrypt = (await import('bcryptjs')).default;
+      const admin = await User.findOne({ role: 'admin' });
+      if (!admin) {
+        const hashedPassword = await bcrypt.hash('AdminPassword123!', 10);
+        const newAdmin = new User({
+          name: 'System Admin',
+          username: 'admin',
+          email: 'admin@blogsphere.com',
+          password: hashedPassword,
+          role: 'admin',
+          bio: 'System Administrator of BlogSphere Platform.',
+          profileImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
+        });
+        await newAdmin.save();
+        console.log('[System Init] Created default admin account: admin@blogsphere.com / AdminPassword123!');
+      }
+    } catch (err: any) {
+      console.error('Default admin check error:', err.message);
+    }
+  })();
+
   // Start automated AI Trending poster scheduler interval (every 6 hours)
   const SIX_HOURS = 6 * 60 * 60 * 1000;
   setInterval(async () => {

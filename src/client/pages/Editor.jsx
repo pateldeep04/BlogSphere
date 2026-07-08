@@ -188,6 +188,8 @@ export default function Editor() {
   const [myCommunities, setMyCommunities] = useState([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [enhancingBlockIndex, setEnhancingBlockIndex] = useState(null);
+  const [docTutorFeedback, setDocTutorFeedback] = useState('');
+  const [docTutorLoading, setDocTutorLoading] = useState(false);
 
   // Spam warning states
   const [spamModalOpen, setSpamModalOpen] = useState(false);
@@ -539,6 +541,65 @@ export default function Editor() {
       alert('AI Block Enhancement failed. Please try again.');
     } finally {
       setEnhancingBlockIndex(null);
+    }
+  };
+
+  const calculateDraftScore = () => {
+    let score = 0;
+    if (title && title.trim()) {
+      score += 20;
+      if (title.length >= 10 && title.length <= 60) score += 10;
+    }
+    const hasHeadings = blocks.some(b => b.type === 'h1' || b.type === 'h2');
+    if (hasHeadings) score += 20;
+    const wordCount = blocks.map(b => b.content || '').join(' ').split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount > 50) score += 20;
+    if (tags.length > 0) score += 15;
+    const hasListOrQuote = blocks.some(b => b.type === 'ul' || b.type === 'ol' || b.type === 'quote');
+    if (hasListOrQuote) score += 15;
+    return score;
+  };
+
+  const getSuggestions = () => {
+    const list = [];
+    if (!title || !title.trim()) {
+      list.push("Add a catchy title to your article.");
+    } else if (title.length < 10) {
+      list.push("Your title is a bit too short for SEO search.");
+    }
+    const hasHeadings = blocks.some(b => b.type === 'h1' || b.type === 'h2');
+    if (!hasHeadings) {
+      list.push("Use headings (H1/H2) to structure your text layout.");
+    }
+    const wordCount = blocks.map(b => b.content || '').join(' ').split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount < 100) {
+      list.push("Write at least 100 words to improve content value.");
+    }
+    if (tags.length === 0) {
+      list.push("Select or write a few tags for discoverability.");
+    }
+    const hasListOrQuote = blocks.some(b => b.type === 'ul' || b.type === 'ol' || b.type === 'quote');
+    if (!hasListOrQuote) {
+      list.push("Include a quote or bullet list to engage readers.");
+    }
+    return list;
+  };
+
+  const handleDocTutorReview = async () => {
+    setDocTutorLoading(true);
+    try {
+      const res = await api.post('/api/blogs/ai-tutor-review', {
+        title,
+        content: JSON.stringify(blocks)
+      });
+      if (res.data.review) {
+        setDocTutorFeedback(res.data.review);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('DocTutor review session failed. Please retry.');
+    } finally {
+      setDocTutorLoading(false);
     }
   };
 
@@ -1432,6 +1493,64 @@ export default function Editor() {
                 <p className="text-xs text-slate-400 leading-relaxed italic">
                   Please save this article draft first to enable Gemini AI translation.
                 </p>
+              )}
+            </div>
+
+            {/* 🤖 AI DocTutor Panel */}
+            <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
+              <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-indigo-500 animate-pulse" />
+                <span>AI DocTutor</span>
+              </h3>
+              
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">DRAFT QUALITY SCORE</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    calculateDraftScore() >= 80 
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' 
+                      : calculateDraftScore() >= 50
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400'
+                      : 'bg-rose-100 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
+                  }`}>
+                    {calculateDraftScore()}/100
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      calculateDraftScore() >= 80 ? 'bg-emerald-500' : calculateDraftScore() >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${calculateDraftScore()}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {getSuggestions().length > 0 && (
+                <div className="mb-4 space-y-1.5">
+                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">TUTOR RECOMMENDATIONS:</span>
+                  <ul className="list-disc list-inside text-[10px] text-slate-500 dark:text-slate-400 space-y-1">
+                    {getSuggestions().map((sug, idx) => (
+                      <li key={idx} className="leading-snug">{sug}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleDocTutorReview}
+                disabled={docTutorLoading}
+                className="w-full py-2 bg-gradient-to-r from-indigo-650 to-primary-650 hover:from-indigo-750 hover:to-primary-750 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                <span>{docTutorLoading ? 'Consulting Tutor...' : 'Review with DocTutor'}</span>
+              </button>
+
+              {docTutorFeedback && (
+                <div className="mt-4 p-3 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/30 text-[10px] text-slate-650 dark:text-slate-400 whitespace-pre-wrap leading-relaxed text-left">
+                  {docTutorFeedback}
+                </div>
               )}
             </div>
 

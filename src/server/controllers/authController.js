@@ -26,6 +26,9 @@ export const register = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Block anyone from registering as an admin
+    const signupRole = (role === 'admin') ? 'author' : (role || 'author');
+
     // Create user
     const user = new User({
       name,
@@ -34,7 +37,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
       bio: bio || '',
       profileImage: profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
-      role: role || 'author',
+      role: signupRole,
       isPrivate: isPrivate || false
     });
 
