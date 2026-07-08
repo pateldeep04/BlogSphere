@@ -613,9 +613,14 @@ export default function BlogDetail() {
       {/* Cover Image */}
       <div className="aspect-video rounded-3xl overflow-hidden shadow-md bg-slate-100 dark:bg-slate-800 mb-8 border border-slate-100 dark:border-slate-800">
         <img
-          src={blog.coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800'}
+          src={(() => {
+            const src = blog.coverImage || '';
+            const md = src.match(/!\[.*?\]\((.*?)\)/);
+            return (md ? md[1] : src.trim()) || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800';
+          })()}
           alt={blog.title}
           className="w-full h-full object-cover"
+          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800'; }}
         />
       </div>
 

@@ -29,9 +29,24 @@ const getSnippet = (content) => {
   return text.substring(0, 140) + (text.length > 140 ? '...' : '');
 };
 
+// Sanitize image URL — strips markdown syntax like ![alt](url) → url
+const sanitizeImageUrl = (src) => {
+  if (!src) return '';
+  // Handle markdown image syntax: ![alt](url)
+  const mdMatch = src.match(/!\[.*?\]\((.*?)\)/);
+  if (mdMatch) return mdMatch[1];
+  // Handle bare markdown link: [text](url)
+  const linkMatch = src.match(/\[.*?\]\((.*?)\)/);
+  if (linkMatch) return linkMatch[1];
+  return src.trim();
+};
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800';
+
 export default function BlogCard({ blog }) {
   const readTime = getReadTime(blog.content);
   const snippet = getSnippet(blog.content);
+  const imageUrl = sanitizeImageUrl(blog.coverImage) || FALLBACK_IMAGE;
 
   return (
     <motion.article
@@ -43,9 +58,10 @@ export default function BlogCard({ blog }) {
       {/* Cover Image */}
       <Link to={`/blog/${blog.slug}`} className="block relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800">
         <img
-          src={blog.coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800'}
+          src={imageUrl}
           alt={blog.title}
           className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+          onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
         />
         {/* Category Badge */}
         {blog.category && (

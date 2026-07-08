@@ -1455,103 +1455,130 @@ export default function Editor() {
             </div>
 
             {/* AI Auto-Translate Panel */}
-            <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
-              <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-primary-500" />
-                <span>AI Translate</span>
-              </h3>
-              {editId ? (
-                <>
-                  <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-                    Translate this draft's title and blocks into Hindi or Gujarati using Gemini.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={translatingAI}
-                      onClick={() => handleAITranslate('hi')}
-                      className="flex-1 py-2 text-xs font-bold bg-slate-50 hover:bg-slate-105 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-205 rounded-xl transition-all disabled:opacity-50"
-                    >
-                      Hindi
-                    </button>
-                    <button
-                      type="button"
-                      disabled={translatingAI}
-                      onClick={() => handleAITranslate('gu')}
-                      className="flex-1 py-2 text-xs font-bold bg-slate-50 hover:bg-slate-105 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-205 rounded-xl transition-all disabled:opacity-50"
-                    >
-                      Gujarati
-                    </button>
-                  </div>
-                  {translatingAI && (
-                    <p className="text-[10px] text-primary-500 animate-pulse mt-2 text-center font-semibold">
-                      Translating content blocks...
+            <div className="overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-sm">
+              <div className="flex items-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-b border-emerald-100/60 dark:border-emerald-900/30">
+                <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-950/50">
+                  <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">AI Translate</span>
+              </div>
+              <div className="p-4">
+                {editId ? (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                      Translate this article into Hindi or Gujarati using Gemini AI.
                     </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-slate-400 leading-relaxed italic">
-                  Please save this article draft first to enable Gemini AI translation.
-                </p>
-              )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={translatingAI}
+                        onClick={() => handleAITranslate('hi')}
+                        className="py-2.5 text-xs font-bold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 rounded-xl transition-all disabled:opacity-50 border border-emerald-100 dark:border-emerald-900/30"
+                      >
+                        🇮🇳 Hindi
+                      </button>
+                      <button
+                        type="button"
+                        disabled={translatingAI}
+                        onClick={() => handleAITranslate('gu')}
+                        className="py-2.5 text-xs font-bold bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-400 rounded-xl transition-all disabled:opacity-50 border border-teal-100 dark:border-teal-900/30"
+                      >
+                        🏛️ Gujarati
+                      </button>
+                    </div>
+                    {translatingAI && (
+                      <p className="text-[10px] text-emerald-600 animate-pulse mt-2.5 text-center font-semibold">
+                        ✨ Translating content blocks...
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-xl border border-amber-100/60 dark:border-amber-900/20">
+                    <span className="text-amber-500 text-sm mt-0.5">💡</span>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                      Save your draft first to unlock AI translation.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* 🤖 AI DocTutor Panel */}
-            <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
-              <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <Lightbulb className="w-4 h-4 text-indigo-500 animate-pulse" />
-                <span>AI DocTutor</span>
-              </h3>
-              
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">DRAFT QUALITY SCORE</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    calculateDraftScore() >= 80 
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' 
-                      : calculateDraftScore() >= 50
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400'
-                      : 'bg-rose-100 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
-                  }`}>
-                    {calculateDraftScore()}/100
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-500 ${
-                      calculateDraftScore() >= 80 ? 'bg-emerald-500' : calculateDraftScore() >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                    }`}
-                    style={{ width: `${calculateDraftScore()}%` }}
-                  ></div>
-                </div>
+            {/* AI DocTutor Panel */}
+            <div className="overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-sm">
+              <div className="flex items-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-indigo-100/60 dark:border-indigo-900/30">
+                <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-indigo-100 dark:bg-indigo-950/50">
+                  <Lightbulb className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                </span>
+                <span className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">AI DocTutor</span>
               </div>
-
-              {getSuggestions().length > 0 && (
-                <div className="mb-4 space-y-1.5">
-                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">TUTOR RECOMMENDATIONS:</span>
-                  <ul className="list-disc list-inside text-[10px] text-slate-500 dark:text-slate-400 space-y-1">
-                    {getSuggestions().map((sug, idx) => (
-                      <li key={idx} className="leading-snug">{sug}</li>
-                    ))}
-                  </ul>
+              <div className="p-4 space-y-4">
+                {/* Score Ring */}
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-shrink-0 w-14 h-14">
+                    <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="5" />
+                      <circle
+                        cx="28" cy="28" r="22" fill="none"
+                        stroke={calculateDraftScore() >= 80 ? '#10b981' : calculateDraftScore() >= 50 ? '#f59e0b' : '#f43f5e'}
+                        strokeWidth="5"
+                        strokeDasharray={`${2 * Math.PI * 22}`}
+                        strokeDashoffset={`${2 * Math.PI * 22 * (1 - calculateDraftScore() / 100)}`}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                      />
+                    </svg>
+                    <span className={`absolute inset-0 flex items-center justify-center text-xs font-extrabold ${
+                      calculateDraftScore() >= 80 ? 'text-emerald-600' : calculateDraftScore() >= 50 ? 'text-amber-600' : 'text-rose-600'
+                    }`}>{calculateDraftScore()}</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Draft Score</p>
+                    <p className={`text-sm font-extrabold ${
+                      calculateDraftScore() >= 80 ? 'text-emerald-600' : calculateDraftScore() >= 50 ? 'text-amber-600' : 'text-rose-600'
+                    }`}>
+                      {calculateDraftScore() >= 80 ? '🏆 Excellent!' : calculateDraftScore() >= 50 ? '⚡ Getting there' : '📝 Needs work'}
+                    </p>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                          calculateDraftScore() >= 80 ? 'bg-emerald-500' : calculateDraftScore() >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${calculateDraftScore()}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              <button
-                type="button"
-                onClick={handleDocTutorReview}
-                disabled={docTutorLoading}
-                className="w-full py-2 bg-gradient-to-r from-indigo-650 to-primary-650 hover:from-indigo-750 hover:to-primary-750 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span>{docTutorLoading ? 'Consulting Tutor...' : 'Review with DocTutor'}</span>
-              </button>
+                {getSuggestions().length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recommendations</span>
+                    <div className="space-y-1.5">
+                      {getSuggestions().map((sug, idx) => (
+                        <div key={idx} className="flex gap-2 text-[11px] text-slate-600 dark:text-slate-400 leading-snug bg-slate-50 dark:bg-slate-800/60 px-3 py-2 rounded-xl">
+                          <span className="text-indigo-400 font-bold mt-0.5">→</span>
+                          <span>{sug}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-              {docTutorFeedback && (
-                <div className="mt-4 p-3 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/30 text-[10px] text-slate-650 dark:text-slate-400 whitespace-pre-wrap leading-relaxed text-left">
-                  {docTutorFeedback}
-                </div>
-              )}
+                <button
+                  type="button"
+                  onClick={handleDocTutorReview}
+                  disabled={docTutorLoading}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/10 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{docTutorLoading ? 'Consulting AI...' : 'Deep Review with DocTutor'}</span>
+                </button>
+
+                {docTutorFeedback && (
+                  <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/30 text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {docTutorFeedback}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Collaborators setup */}
