@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+// Native fetch is available globally in Node 18+ — no import needed
 import User from '../models/User.js';
 import Blog from '../models/Blog.js';
 import Notification from '../models/Notification.js';
