@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "server": "nodemon --exec tsx src/server/index.ts",
-    "client": "vite",
+    "client": "vite --port 5173",
+    "predev": "powershell -Command \"Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host '[predev] Port 5000 cleared.'\"",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "tsc && vite build",
     "preview": "vite preview",

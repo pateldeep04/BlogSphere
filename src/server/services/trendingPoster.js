@@ -20,6 +20,18 @@ export const generateTrendingAutoPost = async () => {
       await bot.save();
     }
 
+    // 2. Time-guard: skip if TrendBot already posted in the last 6 hours
+    const SIX_HOURS_AGO = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const recentPost = await Blog.findOne({
+      author: bot._id,
+      createdAt: { $gte: SIX_HOURS_AGO }
+    }).sort({ createdAt: -1 });
+
+    if (recentPost) {
+      console.log(`[AI TrendBot] ⏭️  Skipping — post already made within last 6 hours: "${recentPost.title}"`);
+      return null;
+    }
+
     let articleData = null;
     const apiKey = process.env.GEMINI_API_KEY;
 
