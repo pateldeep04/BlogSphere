@@ -233,7 +233,7 @@ export default function Admin() {
           type="button"
           onClick={handleTriggerAutoPost}
           disabled={triggeringPost}
-          className="flex shrink-0 items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-600 to-indigo-650 hover:from-primary-750 hover:to-indigo-750 text-white rounded-full text-xs font-bold transition-all shadow-md shadow-primary-500/10 disabled:opacity-50 cursor-pointer"
+          className="flex shrink-0 items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold transition-all shadow-md shadow-primary-500/10 disabled:opacity-50 cursor-pointer"
         >
           <Sparkles className={`w-4 h-4 ${triggeringPost ? 'animate-spin' : ''}`} />
           <span>{triggeringPost ? 'Generating AI Post...' : 'Trigger AI Auto-Post'}</span>
@@ -307,7 +307,7 @@ export default function Admin() {
           onClick={() => { setActiveTab('dailyBrief'); fetchDailyReport(); }}
           className={`px-6 py-2 text-sm font-semibold rounded-full transition-all flex items-center gap-2 flex-shrink-0 ${
             activeTab === 'dailyBrief'
-              ? 'bg-white dark:bg-slate-800 text-indigo-650 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
@@ -726,7 +726,7 @@ export default function Admin() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <span className="text-sm font-extrabold text-slate-800 dark:text-white">{new Date(day.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                        <span className="ml-3 px-2.5 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-655 dark:bg-indigo-955/20 dark:text-indigo-400 rounded-full border border-indigo-100/30">
+                        <span className="ml-3 px-2.5 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 rounded-full border border-indigo-100/30">
                           {day.blogsCount} {day.blogsCount === 1 ? 'article' : 'articles'} published
                         </span>
                       </div>
@@ -734,7 +734,7 @@ export default function Admin() {
                       <button
                         onClick={() => handleGenerateDailyBrief(day.date)}
                         disabled={generatingBriefDate === day.date}
-                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-gradient-to-r from-primary-600 to-indigo-605 hover:from-primary-700 hover:to-indigo-705 text-white rounded-xl transition-all shadow-md shadow-primary-500/10 disabled:opacity-50 cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md shadow-primary-500/10 disabled:opacity-50 cursor-pointer"
                       >
                         <Sparkles className={`w-3.5 h-3.5 ${generatingBriefDate === day.date ? 'animate-spin' : ''}`} />
                         <span>{generatingBriefDate === day.date ? 'Generating AI Brief...' : day.hasBrief ? 'Regenerate Daily AI Brief' : 'Generate Daily AI Brief'}</span>
