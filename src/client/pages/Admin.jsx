@@ -481,7 +481,7 @@ export default function Admin() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'flagged' ? (
           /* Flagged Posts Tab */
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
@@ -560,7 +560,7 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
 
         {/* ── Earnings Report Tab ── */}
         {activeTab === 'earnings' && (
