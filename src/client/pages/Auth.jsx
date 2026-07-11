@@ -129,6 +129,59 @@ export default function Auth() {
     }
   };
 
+  const handleGoogleCallback = async (response) => {
+    dispatch(authStart());
+    try {
+      const res = await api.post('/api/auth/google', { idToken: response.credential });
+      dispatch(authSuccess({ token: res.data.token, user: res.data.user }));
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+      navigate('/');
+    } catch (err) {
+      const errMsg = err.response?.data?.error || 'Google Authentication failed. Please try again.';
+      dispatch(authFailure(errMsg));
+      setLocalError(errMsg);
+    }
+  };
+
+  useEffect(() => {
+    const initializeGoogleSignIn = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '82594612458-dummy.apps.googleusercontent.com',
+          callback: handleGoogleCallback
+        });
+        const btnContainer = document.getElementById('google-signin-button');
+        if (btnContainer) {
+          window.google.accounts.id.renderButton(
+            btnContainer,
+            { 
+              theme: document.documentElement.classList.contains('dark') ? 'filled_blue' : 'outline', 
+              size: 'large', 
+              width: '100%',
+              shape: 'pill'
+            }
+          );
+        }
+      }
+    };
+
+    if (window.google) {
+      initializeGoogleSignIn();
+    } else {
+      const checkScript = setInterval(() => {
+        if (window.google) {
+          initializeGoogleSignIn();
+          clearInterval(checkScript);
+        }
+      }, 100);
+      return () => clearInterval(checkScript);
+    }
+  }, [activeTab]);
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md p-8 rounded-3xl border border-slate-100 dark:border-slate-900 shadow-xl glass-card animate-fade-in">
@@ -344,6 +397,19 @@ export default function Auth() {
           >
             {loading ? 'Processing...' : activeTab === 'login' ? 'Sign In' : 'Create Account'}
           </button>
+
+          {/* Divider */}
+          <div className="relative my-6 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+            </div>
+            <span className="relative px-3 bg-white dark:bg-slate-950 text-xs text-slate-400 font-medium">Or continue with</span>
+          </div>
+
+          {/* Google Sign-in Button */}
+          <div className="w-full flex justify-center">
+            <div id="google-signin-button" className="w-full"></div>
+          </div>
         </form>
       </div>
     </div>
