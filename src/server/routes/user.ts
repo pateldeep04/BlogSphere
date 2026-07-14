@@ -12,7 +12,8 @@ import {
   toggleNewsletter,
   toggleCategorySubscription,
   getDashboardStats,
-  getEarningsReport
+  getEarningsReport,
+  getLeaderboard
 } from '../controllers/userController';
 import { auth, optionalAuth, requireRole } from '../middleware/auth';
 
@@ -33,7 +34,7 @@ router.post('/subscribe-category', auth, toggleCategorySubscription);
 // Admin Only Routes
 router.get('/', auth, requireRole(['admin']), getUsers);
 router.get('/earnings-report', auth, requireRole(['admin']), getEarningsReport);
-router.get('/leaderboard', optionalAuth, getEarningsReport);
+router.get('/leaderboard', optionalAuth, getLeaderboard);
 router.put('/:id', auth, requireRole(['admin']), updateUser);
 router.delete('/:id', auth, requireRole(['admin']), deleteUser);
 

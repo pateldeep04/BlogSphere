@@ -74,6 +74,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  hiddenTags: [{
+    type: String,
+    trim: true
+  }],
   socialLinks: {
     twitter: { type: String, default: '' },
     github: { type: String, default: '' },

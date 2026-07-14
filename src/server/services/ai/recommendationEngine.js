@@ -11,7 +11,7 @@ class RecommendationEngine {
   async getPersonalizedFeed(userId, options = {}) {
     const { limit = 20, offset = 0, category, excludePublished = false } = options;
     
-    const user = await User.findById(userId).select('interests subscribedCategories readingHistory followedUsers bookmarkedBlogs favoriteAuthors').lean();
+    const user = await User.findById(userId).select('interests subscribedCategories hiddenTags readingHistory followedUsers bookmarkedBlogs favoriteAuthors').lean();
     if (!user) return { blogs: [], hasMore: false };
 
     const candidateBlogs = await this.getCandidateBlogs(user, { category, excludePublished });
@@ -44,6 +44,7 @@ class RecommendationEngine {
 
     const interests = user.interests || [];
     const subscribedCategories = user.subscribedCategories || [];
+    const hiddenTags = user.hiddenTags || [];
     const followedUsers = user.followedUsers || [];
     const readingHistory = user.readingHistory || [];
 
@@ -51,6 +52,9 @@ class RecommendationEngine {
     
     if (interests.length > 0) {
       orConditions.push({ tags: { $in: interests } });
+    }
+    if (hiddenTags.length > 0) {
+      orConditions.push({ tags: { $in: hiddenTags } });
     }
     if (subscribedCategories.length > 0) {
       orConditions.push({ category: { $in: subscribedCategories } });
@@ -83,6 +87,7 @@ class RecommendationEngine {
   async scoreBlogsForUser(blogs, user) {
     const userInterests = new Set(user.interests || []);
     const userCategories = new Set(user.subscribedCategories || []);
+    const userHiddenTags = new Set(user.hiddenTags || []);
     const followedUsers = new Set((user.followedUsers || []).map(id => id.toString()));
     const readingHistory = new Set((user.readingHistory || []).map(id => id.toString()));
     const bookmarks = new Set((user.bookmarkedBlogs || []).map(id => id.toString()));
@@ -95,7 +100,7 @@ class RecommendationEngine {
       const authorId = blog.author.toString();
       const ageHours = (now - new Date(blog.createdAt).getTime()) / (1000 * 60 * 60);
 
-      score += this.calculateContentScore(blog, userInterests, userCategories);
+      score += this.calculateContentScore(blog, userInterests, userCategories, userHiddenTags);
       score += this.calculateAuthorScore(authorId, followedUsers, favoriteAuthors, user);
       score += this.calculateEngagementScore(blog);
       score += this.calculateRecencyScore(ageHours);
@@ -108,7 +113,7 @@ class RecommendationEngine {
     return scores;
   }
 
-  calculateContentScore(blog, userInterests, userCategories) {
+  calculateContentScore(blog, userInterests, userCategories, userHiddenTags = new Set()) {
     let score = 0;
     const blogTags = blog.tags || [];
     const blogCategory = blog.category;
@@ -122,6 +127,10 @@ class RecommendationEngine {
 
     const tagOverlap = blogTags.filter(tag => userInterests.has(tag)).length;
     score += tagOverlap * 5;
+
+    // AI customized interests (hidden tags) matching boost
+    const hiddenTagMatches = blogTags.filter(tag => userHiddenTags.has(tag)).length;
+    score += hiddenTagMatches * 25;
 
     return score;
   }

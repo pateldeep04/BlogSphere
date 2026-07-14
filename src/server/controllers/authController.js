@@ -47,20 +47,25 @@ export const register = async (req, res) => {
     // Block anyone from registering as an admin
     const signupRole = (role === 'admin') ? 'author' : (role || 'author');
 
-    // Call Gemini API to classify bio and set subscribedCategories
+    // Call Gemini API to classify bio and set subscribedCategories & hiddenTags
     let subscribedCategories = ['Technology', 'Education', 'Travel']; // default fallbacks
+    let hiddenTags = [];
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey && bio && bio.trim()) {
       try {
-        const aiPrompt = `Analyze the following user profile bio and classify their interests into one or more of these specific categories: ["Technology", "Travel", "Food", "Education", "Sports"].
-
-User Bio: "${bio}"
-
-Rules:
-1. Return ONLY a JSON array of strings containing the categories that match the user's bio (e.g. ["Technology", "Travel"]).
-2. Do not include categories that are not in the list.
-3. If the bio does not match any category, default to ["Technology", "Education", "Travel"].
-4. Only return the raw JSON array, no markdown backticks, no explanation.`;
+        const aiPrompt = `Analyze the following user profile bio: "${bio}"
+        
+        Tasks:
+        1. Classify their high-level interests into one or more of these standard categories: ["Technology", "Travel", "Food", "Education", "Sports"].
+        2. Extrapolate 3 to 6 specific low-level keywords/topics (e.g. "react", "cooking", "budget-travel", "machine-learning", "history") that describe their interests based on their bio. These will be system-level hidden tags.
+        
+        You MUST return a JSON object with this exact structure:
+        {
+          "categories": ["Technology", "Travel"],
+          "tags": ["web development", "javascript", "react", "budget-travel"]
+        }
+        
+        Only return the raw JSON object. Do not wrap it in markdown block quotes (such as \`\`\`json). Provide clean, parseable JSON.`;
 
         const aiResponse = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           contents: [{ parts: [{ text: aiPrompt }] }],
@@ -76,12 +81,16 @@ Rules:
             cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
           }
           const parsed = JSON.parse(cleanText);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          
+          if (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
             const validCategories = ['Technology', 'Travel', 'Food', 'Education', 'Sports'];
-            const filtered = parsed.filter(cat => validCategories.includes(cat));
+            const filtered = parsed.categories.filter(cat => validCategories.includes(cat));
             if (filtered.length > 0) {
               subscribedCategories = filtered;
             }
+          }
+          if (parsed.tags && Array.isArray(parsed.tags)) {
+            hiddenTags = parsed.tags.map(t => String(t).toLowerCase().trim()).filter(Boolean);
           }
         }
       } catch (aiErr) {
@@ -99,7 +108,8 @@ Rules:
       profileImage: profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
       role: signupRole,
       isPrivate: isPrivate || false,
-      subscribedCategories
+      subscribedCategories,
+      hiddenTags
     });
 
     await user.save();

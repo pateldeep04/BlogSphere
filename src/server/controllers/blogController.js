@@ -1458,7 +1458,7 @@ Return ONLY these review sections. Be encouraging but precise, helping the autho
 // GET Daily Analytics grouped by date
 export const getDailyAnalytics = async (req, res) => {
   try {
-    const blogs = await Blog.find({ status: 'published' }).select('title category tags createdAt');
+    const blogs = await Blog.find({ status: 'published' }).select('title category tags createdAt slug');
     const groups = {};
 
     blogs.forEach(blog => {
@@ -1474,7 +1474,8 @@ export const getDailyAnalytics = async (req, res) => {
       groups[dateStr].blogs.push({
         title: blog.title,
         category: blog.category || 'General',
-        tags: blog.tags || []
+        tags: blog.tags || [],
+        slug: blog.slug
       });
     });
 

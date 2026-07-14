@@ -532,3 +532,75 @@ export const getEarningsReport = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getLeaderboard = async (req, res) => {
+  try {
+    // Get all non-admin users (emails omitted for public access)
+    const users = await User.find({ role: { $ne: 'admin' } })
+      .select('name username profileImage role createdAt');
+
+    const report = await Promise.all(users.map(async (user) => {
+      const blogs = await Blog.find({ author: user._id, status: 'published' });
+
+      const totalPosts      = blogs.length;
+      const totalViews      = blogs.reduce((s, b) => s + (b.views || 0), 0);
+      const totalLikes      = blogs.reduce((s, b) => s + (b.likes?.length || 0), 0);
+      const totalReactions  = blogs.reduce((s, b) => {
+        const r = b.reactions || {};
+        return s + (r.thumbsUp?.length || 0) + (r.heart?.length || 0)
+                 + (r.clap?.length || 0)     + (r.laugh?.length || 0);
+      }, 0);
+      const totalComments   = await Comment.countDocuments({
+        blog: { $in: blogs.map(b => b._id) }
+      });
+
+      // Earnings calculation
+      const earningsFromViews     = totalViews      * 0.005;
+      const earningsFromPosts     = totalPosts      * 0.25;
+      const earningsFromLikes     = totalLikes      * 0.10;
+      const earningsFromReactions = totalReactions  * 0.05;
+      const earningsFromComments  = totalComments   * 0.02;
+      const estimatedEarnings     = parseFloat(
+        (earningsFromViews + earningsFromPosts + earningsFromLikes + earningsFromReactions + earningsFromComments)
+        .toFixed(2)
+      );
+
+      // Top performing post
+      const topPost = blogs.sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+
+      return {
+        _id:              user._id,
+        name:             user.name,
+        username:         user.username || '—',
+        role:             user.role,
+        profileImage:     user.profileImage,
+        joinedAt:         user.createdAt,
+        totalPosts,
+        totalViews,
+        totalLikes,
+        totalReactions,
+        totalComments,
+        estimatedEarnings,
+        breakdown: {
+          fromViews:     earningsFromViews.toFixed(2),
+          fromPosts:     earningsFromPosts.toFixed(2),
+          fromLikes:     earningsFromLikes.toFixed(2),
+          fromReactions: earningsFromReactions.toFixed(2),
+          fromComments:  earningsFromComments.toFixed(2)
+        },
+        topPost: topPost ? {
+          title: topPost.title,
+          slug:  topPost.slug,
+          views: topPost.views || 0
+        } : null
+      };
+    }));
+
+    // Sort by earnings descending
+    report.sort((a, b) => b.estimatedEarnings - a.estimatedEarnings);
+
+    res.status(200).json({ report });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
