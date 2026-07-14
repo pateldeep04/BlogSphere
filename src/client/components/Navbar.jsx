@@ -310,7 +310,7 @@ export default function Navbar() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 <Link
                   to="/login"
                   className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary-600"
@@ -399,6 +399,25 @@ export default function Navbar() {
                 <span>Write Article</span>
               </Link>
             </>
+          )}
+
+          {!isAuthenticated && (
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-bold text-slate-700 dark:text-slate-305 hover:text-primary-600 border border-slate-200 dark:border-slate-700 rounded-xl"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/login?tab=register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-sm"
+              >
+                Sign Up
+              </Link>
+            </div>
           )}
         </div>
       )}
