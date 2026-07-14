@@ -7,8 +7,12 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import './index.css'
 import App from './App.tsx'
 
+import { ToastProvider } from './context/ToastContext.jsx'
+
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
-    <App />
+    <ToastProvider>
+      <App />
+    </ToastProvider>
   </Provider>
 )

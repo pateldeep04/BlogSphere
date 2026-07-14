@@ -8,6 +8,7 @@ import {
 import api from '../utils/api.js';
 import { m, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { useToast } from '../context/ToastContext.jsx';
 
 // Category color mappings
 const CATEGORY_COLORS = {
@@ -21,6 +22,7 @@ const CATEGORY_COLORS = {
 
 export default function Galaxy() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const canvasRef = useRef(null);
   
   // App states
@@ -759,7 +761,7 @@ export default function Galaxy() {
       });
     } catch (err) {
       console.error('Failed to generate AI Constellation:', err);
-      alert(err.response?.data?.error || 'Failed to curate path. Make sure you have enough published blogs.');
+      showToast(err.response?.data?.error || 'Failed to curate path. Make sure you have enough published blogs.', 'error');
     } finally {
       setGeneratingAIConstellation(false);
     }

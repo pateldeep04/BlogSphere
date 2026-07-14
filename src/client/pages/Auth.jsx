@@ -27,7 +27,8 @@ export default function Auth() {
     name: '',
     username: '',
     email: '',
-    password: ''
+    password: '',
+    bio: ''
   });
   const [validated, setValidated] = useState(false);
 
@@ -49,12 +50,12 @@ export default function Auth() {
     } else {
       setActiveTab('login');
     }
-    setErrors({ name: '', email: '', password: '' });
+    setErrors({ name: '', username: '', email: '', password: '', bio: '' });
     setValidated(false);
   }, [searchParams, location.pathname]);
 
   const validateForm = () => {
-    const tempErrors = { name: '', email: '', password: '' };
+    const tempErrors = { name: '', username: '', email: '', password: '', bio: '' };
     let isValid = true;
 
     if (activeTab === 'register' && !formData.name.trim()) {
@@ -64,6 +65,14 @@ export default function Auth() {
 
     if (activeTab === 'register' && formData.username.trim() && !/^[a-zA-Z0-9_]+$/.test(formData.username)) {
       tempErrors.username = 'Username can only contain letters, numbers, and underscores.';
+      isValid = false;
+    }
+
+    if (activeTab === 'register' && !formData.bio.trim()) {
+      tempErrors.bio = 'Bio is required.';
+      isValid = false;
+    } else if (activeTab === 'register' && formData.bio.trim().length < 5) {
+      tempErrors.bio = 'Bio must be at least 5 characters long.';
       isValid = false;
     }
 
@@ -282,17 +291,25 @@ export default function Auth() {
                 )}
               </div>
 
-              {/* Bio (Optional) */}
+              {/* Bio (Required) */}
               <div className="relative">
                 <input
                   type="text"
                   name="bio"
+                  required
                   value={formData.bio}
                   onChange={handleChange}
-                  placeholder="Bio (e.g. Fullstack Engineer)"
-                  className="w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100"
+                  placeholder="Bio (e.g. Fullstack Engineer) *"
+                  className={`w-full py-2.5 pl-10 pr-4 text-sm border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-100 ${
+                    errors.bio ? 'is-invalid border-rose-500' : (validated && !errors.bio ? 'is-valid border-emerald-500' : '')
+                  }`}
                 />
                 <BookOpen className="absolute w-4 h-4 text-slate-400 top-3.5 left-3.5" />
+                {errors.bio && (
+                  <div className="invalid-feedback text-start text-[11px] text-rose-500 mt-1 block">
+                    {errors.bio}
+                  </div>
+                )}
               </div>
 
               {/* Account Type Selection */}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { useToast } from '../context/ToastContext.jsx';
 import { Eye, Heart, Clock, Volume2, Globe, Sparkles, History, Bookmark, MessageSquare, CornerDownRight, Play, Pause, Square, Trash2, ArrowLeft, Check, UserPlus, UserMinus, X, AlertCircle, Mail } from 'lucide-react';
 import api from '../utils/api.js';
 import confetti from 'canvas-confetti';
@@ -129,6 +130,7 @@ export default function BlogDetail() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { showToast } = useToast();
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -316,7 +318,7 @@ export default function BlogDetail() {
   const handleReportSubmit = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      alert('Please log in to report articles.');
+      showToast('Please log in to report articles.', 'warning');
       return;
     }
     if (!reportReason.trim()) return;
@@ -324,11 +326,11 @@ export default function BlogDetail() {
     setReporting(true);
     try {
       await api.post(`/api/blogs/${blog._id}/report`, { reason: reportReason.trim() });
-      alert('Thank you! This article has been flagged and sent for moderation.');
+      showToast('Thank you! This article has been flagged and sent for moderation.', 'success');
       setReportOpen(false);
       setReportReason('');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to file report.');
+      showToast(err.response?.data?.error || 'Failed to file report.', 'error');
     } finally {
       setReporting(false);
     }
@@ -366,7 +368,7 @@ export default function BlogDetail() {
 
   const handleSubmitQuiz = async () => {
     if (quizAnswers.some(ans => ans === null)) {
-      alert('Please answer all three questions.');
+      showToast('Please answer all three questions.', 'warning');
       return;
     }
     setSubmittingQuiz(true);
@@ -389,7 +391,7 @@ export default function BlogDetail() {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to submit quiz.');
+      showToast('Failed to submit quiz.', 'error');
     } finally {
       setSubmittingQuiz(false);
     }

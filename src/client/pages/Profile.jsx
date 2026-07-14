@@ -5,12 +5,14 @@ import { AlertCircle, User, Users, BookOpen, Settings2, Github, Twitter, Globe, 
 import api from '../utils/api.js';
 import BlogCard from '../components/BlogCard.jsx';
 import { updateCurrentUser } from '../redux/authSlice.js';
+import { useToast } from '../context/ToastContext.jsx';
 
 export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user: currentUser, isAuthenticated } = useSelector((state) => state.auth);
+  const { showToast } = useToast();
 
   const [profileUser, setProfileUser] = useState(null);
   const [blogs, setBlogs] = useState([]);
@@ -131,7 +133,7 @@ export default function Profile() {
       setIsEditModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Failed to update profile.');
+      showToast(err.response?.data?.error || 'Failed to update profile.', 'error');
     }
   };
 

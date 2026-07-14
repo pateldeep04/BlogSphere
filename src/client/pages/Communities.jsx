@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useToast } from '../context/ToastContext.jsx';
 import { Link } from 'react-router-dom';
 import { Users, Plus, ArrowRight, ArrowLeft, MessageSquare, ShieldAlert, Sparkles, BookOpen } from 'lucide-react';
 import api from '../utils/api.js';
@@ -7,6 +8,7 @@ import BlogCard from '../components/BlogCard.jsx';
 
 export default function Communities() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { showToast } = useToast();
   
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function Communities() {
   const handleJoinLeave = async (commId, e) => {
     e.stopPropagation(); // Avoid selecting the card
     if (!isAuthenticated) {
-      alert('Please log in to join communities.');
+      showToast('Please log in to join communities.', 'warning');
       return;
     }
     try {

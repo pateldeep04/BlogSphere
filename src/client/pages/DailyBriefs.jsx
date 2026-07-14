@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { useToast } from '../context/ToastContext.jsx';
 import { Sparkles, Calendar, CalendarDays, ChevronLeft, ChevronRight, Brain } from 'lucide-react';
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from 'date-fns';
 import api from '../utils/api.js';
 
 export default function DailyBriefs() {
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { showToast } = useToast();
   const [report, setReport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -23,8 +27,10 @@ export default function DailyBriefs() {
   };
 
   useEffect(() => {
-    fetchReport();
-  }, []);
+    if (isAuthenticated) {
+      fetchReport();
+    }
+  }, [isAuthenticated]);
 
   const weekDays = eachDayOfInterval({
     start: currentWeekStart,
@@ -46,7 +52,7 @@ export default function DailyBriefs() {
     if (btn) btn.disabled = true;
     try {
       const res = await api.post('/api/blogs/daily-brief/generate', { date: dateStr });
-      alert(`AI summary for ${formatFullDate(dateStr)} generated successfully!`);
+      showToast(`AI summary for ${formatFullDate(dateStr)} generated successfully!`, 'success');
       fetchReport();
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Failed to generate AI summary.';
@@ -54,11 +60,35 @@ export default function DailyBriefs() {
         // This is expected for days with no posts - show a nice message instead of alert
         return; // The UI will handle showing "no updates" message
       }
-      alert(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       if (btn) btn.disabled = false;
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-24 text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-650 dark:text-indigo-400 mx-auto animate-pulse">
+          <Brain className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Daily AI Briefs</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            Please sign in to view and generate daily AI summaries of community blog activity.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Link
+            to="/login"
+            className="inline-block px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-500/10 transition-all text-center"
+          >
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

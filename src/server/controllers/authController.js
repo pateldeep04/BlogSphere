@@ -9,6 +9,23 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, bio, profileImage, role, isPrivate, username } = req.body;
 
+    // Validations
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required.' });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    if (!bio || !bio.trim()) {
+      return res.status(400).json({ error: 'Bio is required.' });
+    }
+    if (bio.trim().length < 5) {
+      return res.status(400).json({ error: 'Bio must be at least 5 characters long.' });
+    }
+
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -30,16 +47,59 @@ export const register = async (req, res) => {
     // Block anyone from registering as an admin
     const signupRole = (role === 'admin') ? 'author' : (role || 'author');
 
+    // Call Gemini API to classify bio and set subscribedCategories
+    let subscribedCategories = ['Technology', 'Education', 'Travel']; // default fallbacks
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey && bio && bio.trim()) {
+      try {
+        const aiPrompt = `Analyze the following user profile bio and classify their interests into one or more of these specific categories: ["Technology", "Travel", "Food", "Education", "Sports"].
+
+User Bio: "${bio}"
+
+Rules:
+1. Return ONLY a JSON array of strings containing the categories that match the user's bio (e.g. ["Technology", "Travel"]).
+2. Do not include categories that are not in the list.
+3. If the bio does not match any category, default to ["Technology", "Education", "Travel"].
+4. Only return the raw JSON array, no markdown backticks, no explanation.`;
+
+        const aiResponse = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          contents: [{ parts: [{ text: aiPrompt }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        }, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const rawText = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (rawText) {
+          let cleanText = rawText;
+          if (cleanText.startsWith('```')) {
+            cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+          }
+          const parsed = JSON.parse(cleanText);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const validCategories = ['Technology', 'Travel', 'Food', 'Education', 'Sports'];
+            const filtered = parsed.filter(cat => validCategories.includes(cat));
+            if (filtered.length > 0) {
+              subscribedCategories = filtered;
+            }
+          }
+        }
+      } catch (aiErr) {
+        console.error('AI Bio Classification failed:', aiErr.message);
+      }
+    }
+
     // Create user
     const user = new User({
       name,
       username: uniqueUsername,
       email,
       password: hashedPassword,
-      bio: bio || '',
+      bio: bio.trim(),
       profileImage: profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
       role: signupRole,
-      isPrivate: isPrivate || false
+      isPrivate: isPrivate || false,
+      subscribedCategories
     });
 
     await user.save();

@@ -341,7 +341,7 @@ export default function Editor() {
   // Grammar/Spell Check - sends user text to AI for corrections only (no new words)
   const handleGrammarCheck = async () => {
     // Extract all text content from blocks
-    const textToCheck = blocks.map(b => b.content || '').join(' ');
+    const textToCheck = blocks.map(b => b.content || '').join('\n');
     if (!textToCheck.trim()) {
       showToast('Please write some content first to check for grammar/spelling errors.', 'error');
       return;
@@ -676,10 +676,21 @@ export default function Editor() {
 
     if (corrected) {
       handleBlocksChange(newBlocks);
-      setGrammarErrors(prev => prev.filter(e => e !== error));
+      setGrammarErrors(prev => {
+        const filtered = prev.filter(e => e !== error);
+        if (filtered.length === 0) {
+          confetti({
+            particleCount: 50,
+            spread: 40,
+            origin: { y: 0.6 }
+          });
+        }
+        return filtered;
+      });
       showToast(`Corrected "${error.original}" to "${error.suggestion}"`, 'success');
     } else {
-      showToast(`Could not find the text "${error.original}" in the editor.`, 'warning');
+      setGrammarErrors(prev => prev.filter(e => e !== error));
+      showToast(`Original text was modified. Correction dismissed.`, 'info');
     }
   };
 
@@ -706,12 +717,17 @@ export default function Editor() {
       }
     });
 
+    setGrammarErrors([]);
     if (correctedCount > 0) {
       handleBlocksChange(currentBlocks);
-      setGrammarErrors([]);
       showToast(`Successfully applied ${correctedCount} correction(s)!`, 'success');
+      confetti({
+        particleCount: 50,
+        spread: 40,
+        origin: { y: 0.6 }
+      });
     } else {
-      showToast(`No corrections could be applied.`, 'warning');
+      showToast(`Dismissed spelling/grammar check issues.`, 'info');
     }
   };
 
@@ -2190,41 +2206,52 @@ export default function Editor() {
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Found {grammarErrors.length} potential issue(s) in your writing:
-            </p>
-
-            {grammarErrors.length > 0 && (
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                {grammarErrors.map((error, idx) => (
-                  <div key={idx} className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/20 rounded-2xl flex flex-col justify-between md:flex-row md:items-center gap-3">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        <span className="text-emerald-500 font-bold">•</span>
-                        <span className="font-semibold text-emerald-700 dark:text-emerald-300 capitalize">{error.type}: </span>
-                        <span className="line-through text-rose-500 font-medium">"{error.original}"</span>
-                        {error.suggestion && (
-                          <span className="text-slate-500 dark:text-slate-400">→</span>
-                        )}
-                        {error.suggestion && (
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">"{error.suggestion}"</span>
-                        )}
+            {grammarErrors.length > 0 ? (
+              <>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Found {grammarErrors.length} potential issue(s) in your writing:
+                </p>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {grammarErrors.map((error, idx) => (
+                    <div key={idx} className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/20 rounded-2xl flex flex-col justify-between md:flex-row md:items-center gap-3">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          <span className="text-emerald-500 font-bold">•</span>
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-300 capitalize">{error.type}: </span>
+                          <span className="line-through text-rose-500 font-medium">"{error.original}"</span>
+                          {error.suggestion && (
+                            <span className="text-slate-500 dark:text-slate-400">→</span>
+                          )}
+                          {error.suggestion && (
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">"{error.suggestion}"</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 italic">
+                          Context: ...{error.context}...
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 italic">
-                        Context: ...{error.context}...
-                      </div>
+                      {error.suggestion && (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyCorrection(error)}
+                          className="self-end md:self-center px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition-all"
+                        >
+                          Apply Fix
+                        </button>
+                      )}
                     </div>
-                    {error.suggestion && (
-                      <button
-                        type="button"
-                        onClick={() => handleApplyCorrection(error)}
-                        className="self-end md:self-center px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition-all"
-                      >
-                        Apply Fix
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="py-8 flex flex-col items-center justify-center text-center gap-3 bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl p-6">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/45 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-6 h-6 animate-bounce" />
+                </div>
+                <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400">Everything is OK!</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                  No spelling or grammar mistakes found. Your writing looks absolutely perfect!
+                </p>
               </div>
             )}
 

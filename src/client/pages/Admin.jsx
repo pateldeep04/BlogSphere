@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { useToast } from '../context/ToastContext.jsx';
 import { Shield, Users, BookOpen, AlertTriangle, ShieldCheck, Trash2, Edit3, ArrowLeft, X, Sparkles, TrendingUp, DollarSign, Eye, Heart, FileDown, RefreshCw, Award } from 'lucide-react';
 import api from '../utils/api.js';
 
 export default function Admin() {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('users');
   const [usersList, setUsersList] = useState([]);
@@ -33,7 +35,7 @@ export default function Admin() {
       const res = await api.get('/api/blogs/admin/daily-analytics');
       setDailyReport(res.data.report || []);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to fetch daily analytics report.');
+      showToast(err.response?.data?.error || 'Failed to fetch daily analytics report.', 'error');
     } finally {
       setDailyReportLoading(false);
     }
@@ -43,7 +45,7 @@ export default function Admin() {
     setGeneratingBriefDate(date);
     try {
       const res = await api.post('/api/blogs/admin/daily-brief/generate', { date });
-      alert(`AI summary for ${date} generated successfully!`);
+      showToast(`AI summary for ${date} generated successfully!`, 'success');
       // Update local report with generated brief
       setDailyReport(prev => prev.map(item => {
         if (item.date === date) {
@@ -57,7 +59,7 @@ export default function Admin() {
         return item;
       }));
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to generate AI summary brief.');
+      showToast(err.response?.data?.error || 'Failed to generate AI summary brief.', 'error');
     } finally {
       setGeneratingBriefDate('');
     }
@@ -67,11 +69,11 @@ export default function Admin() {
     setTriggeringPost(true);
     try {
       const res = await api.post('/api/blogs/trigger-trending-post');
-      alert(`Successfully published AI Trending Article: "${res.data.blog.title}"`);
+      showToast(`Successfully published AI Trending Article: "${res.data.blog.title}"`, 'success');
       const blogsRes = await api.get('/api/blogs?status=all');
       setBlogsList(blogsRes.data.blogs || []);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to trigger automated trending post.');
+      showToast(err.response?.data?.error || 'Failed to trigger automated trending post.', 'error');
     } finally {
       setTriggeringPost(false);
     }
@@ -83,7 +85,7 @@ export default function Admin() {
       const res = await api.get('/api/users/earnings-report');
       setEarningsReport(res.data.report || []);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to fetch earnings report.');
+      showToast(err.response?.data?.error || 'Failed to fetch earnings report.', 'error');
     } finally {
       setEarningsLoading(false);
     }
@@ -158,7 +160,7 @@ export default function Admin() {
       setRestrictedWords([...restrictedWords, res.data.word].sort((a, b) => a.word.localeCompare(b.word)));
       setNewRestrictedWord('');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to add restricted word.');
+      showToast(err.response?.data?.error || 'Failed to add restricted word.', 'error');
     } finally {
       setWordAdding(false);
     }
@@ -170,7 +172,7 @@ export default function Admin() {
         await api.delete(`/api/restricted-words/${wordId}`);
         setRestrictedWords(restrictedWords.filter(w => w._id !== wordId));
       } catch (err) {
-        alert(err.response?.data?.error || 'Failed to delete restricted word.');
+        showToast(err.response?.data?.error || 'Failed to delete restricted word.', 'error');
       }
     }
   };
@@ -182,7 +184,7 @@ export default function Admin() {
       setUsersList(usersList.map(u => u._id === targetId ? { ...u, role: newRole } : u));
     } catch (e) {
       console.error(e);
-      alert('Failed to update user role.');
+      showToast('Failed to update user role.', 'error');
     }
   };
 
@@ -526,10 +528,10 @@ export default function Admin() {
                               try {
                                 await api.post(`/api/blogs/${blog._id}/dismiss-reports`);
                                 setFlaggedBlogs(flaggedBlogs.filter(b => b._id !== blog._id));
-                                alert('All report alerts dismissed successfully.');
-                              } catch (err) {
-                                alert(err.response?.data?.error || 'Failed to dismiss reports.');
-                              }
+                                  showToast('All report alerts dismissed successfully.', 'success');
+                                } catch (err) {
+                                  showToast(err.response?.data?.error || 'Failed to dismiss reports.', 'error');
+                                }
                             }
                           }}
                           className="px-3 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 rounded-lg transition-all inline-block animate-scale-in"
@@ -543,10 +545,10 @@ export default function Admin() {
                                 await api.delete(`/api/blogs/${blog._id}`);
                                 setFlaggedBlogs(flaggedBlogs.filter(b => b._id !== blog._id));
                                 setBlogsList(blogsList.filter(b => b._id !== blog._id));
-                                alert('Reported post deleted successfully.');
-                              } catch (err) {
-                                alert(err.response?.data?.error || 'Failed to delete post.');
-                              }
+                                  showToast('Reported post deleted successfully.', 'success');
+                                } catch (err) {
+                                  showToast(err.response?.data?.error || 'Failed to delete post.', 'error');
+                                }
                             }
                           }}
                           className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-955/20 rounded-lg transition-colors inline-block align-middle"
