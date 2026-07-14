@@ -14,7 +14,7 @@ import {
   getDashboardStats,
   getEarningsReport
 } from '../controllers/userController';
-import { auth, requireRole } from '../middleware/auth';
+import { auth, optionalAuth, requireRole } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -33,6 +33,7 @@ router.post('/subscribe-category', auth, toggleCategorySubscription);
 // Admin Only Routes
 router.get('/', auth, requireRole(['admin']), getUsers);
 router.get('/earnings-report', auth, requireRole(['admin']), getEarningsReport);
+router.get('/leaderboard', optionalAuth, getEarningsReport);
 router.put('/:id', auth, requireRole(['admin']), updateUser);
 router.delete('/:id', auth, requireRole(['admin']), deleteUser);
 

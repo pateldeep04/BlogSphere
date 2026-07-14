@@ -9,6 +9,8 @@ import BlogDetail from './pages/BlogDetail';
 import Editor from './pages/Editor';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import DailyBriefs from './pages/DailyBriefs';
+import LeadershipBoard from './pages/LeadershipBoard';
 import Profile from './pages/Profile';
 import Galaxy from './pages/Galaxy';
 import Communities from './pages/Communities';
@@ -53,6 +55,8 @@ export default function App() {
                 <Route path="/blog" element={<Navigate to="/" replace />} />
                 <Route path="/editor" element={<Editor />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/daily-briefs" element={<DailyBriefs />} />
+                <Route path="/leaderboard" element={<LeadershipBoard />} />
                 <Route path="/system-admin-sphere" element={<Admin />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/adcenter" element={<AdCenter />} />

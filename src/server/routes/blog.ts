@@ -39,6 +39,8 @@ const router = express.Router();
 router.get('/', getBlogs);
 router.get('/admin/daily-analytics', auth, requireRole(['admin']), getDailyAnalytics);
 router.post('/admin/daily-brief/generate', auth, requireRole(['admin']), generateDailyBrief);
+router.get('/daily-briefs', optionalAuth, getDailyAnalytics);
+router.post('/daily-brief/generate', optionalAuth, generateDailyBrief);
 router.get('/recommendations', auth, getRecommendations);
 router.get('/trending', optionalAuth, getTrendingBlogs);
 router.get('/flagged', auth, requireRole(['admin']), getFlaggedBlogs);
