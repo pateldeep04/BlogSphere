@@ -116,22 +116,22 @@ export default function Home() {
             <p className="mt-4 max-w-xl mx-auto text-lg text-slate-400 font-medium">
               Discover stories, collaborate on code reviews, translate articles instantly, and participate in peer editing.
             </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-4 max-w-xs sm:max-w-none mx-auto">
               <a
                 href="#feed-start"
-                className="px-6 py-3 rounded-full text-sm font-semibold bg-primary-600 hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/20"
+                className="px-6 py-3 rounded-full text-sm font-semibold bg-primary-600 hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/20 text-center"
               >
                 Start Reading
               </a>
               <Link
                 to="/galaxy"
-                className="px-6 py-3 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all border border-indigo-500/30 flex items-center gap-1.5 shadow-lg shadow-indigo-500/20 text-white"
+                className="px-6 py-3 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all border border-indigo-500/30 flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-500/20 text-white"
               >
                 Explore Galaxy 🌌
               </Link>
               <Link
                 to="/editor"
-                className="px-6 py-3 rounded-full text-sm font-semibold bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
+                className="px-6 py-3 rounded-full text-sm font-semibold bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700 text-center"
               >
                 Create Article
               </Link>
@@ -257,7 +257,7 @@ export default function Home() {
 
             {/* Feed Tabs Selector */}
             {!category && !tag && !search && (
-              <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6">
+              <div className="flex border-b border-slate-200 dark:border-slate-805 mb-6 overflow-x-auto scrollbar-none pb-0.5 whitespace-nowrap">
                 {isAuthenticated && (
                   <button
                     onClick={() => setActiveFeedTab('recommended')}
