@@ -928,7 +928,7 @@ export default function Editor() {
   const handleAddTag = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const cleaned = tagInput.trim().replace(/[^a-zA-Z0-9]/g, '');
+      const cleaned = tagInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
       if (cleaned && !tags.includes(cleaned)) {
         setTags([...tags, cleaned]);
       }
@@ -1756,7 +1756,8 @@ export default function Editor() {
                   const dictionary = ['React', 'Node.js', 'Express', 'MongoDB', 'Authentication', 'Security', 'JWT', 'Tailwind', 'CSS', 'JavaScript', 'TypeScript', 'Next.js', 'Vite', 'Docker', 'Git', 'Redux', 'API', 'REST', 'Web3', 'AI', 'Python', 'DevOps'];
                   const textToScan = (title + ' ' + blocks.map(b => b.content || '').join(' ')).toLowerCase();
                   const suggestions = dictionary.filter(tag => {
-                    if (tags.some(t => t.toLowerCase() === tag.toLowerCase())) return false;
+                    const cleanSuggestion = tag.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (tags.includes(cleanSuggestion)) return false;
                     const regex = new RegExp(`\\b${tag.toLowerCase().replace('.', '\\.')}\\b`, 'i');
                     return regex.test(textToScan);
                   });
@@ -1770,7 +1771,12 @@ export default function Editor() {
                           <button
                             key={tag}
                             type="button"
-                            onClick={() => setTags([...tags, tag])}
+                            onClick={() => {
+                              const cleaned = tag.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                              if (cleaned && !tags.includes(cleaned)) {
+                                setTags([...tags, cleaned]);
+                              }
+                            }}
                             className="text-[10px] bg-indigo-50/50 text-indigo-600 px-2 py-0.5 rounded-md border border-indigo-100 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/40 hover:dark:bg-indigo-950/40 transition-all font-semibold"
                           >
                             +{tag}

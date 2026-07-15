@@ -57,12 +57,12 @@ export const register = async (req, res) => {
         
         Tasks:
         1. Classify their high-level interests into one or more of these standard categories: ["Technology", "Travel", "Food", "Education", "Sports"].
-        2. Extrapolate 3 to 6 specific low-level keywords/topics (e.g. "react", "cooking", "budget-travel", "machine-learning", "history") that describe their interests based on their bio. These will be system-level hidden tags.
+        2. Extrapolate exactly ONE specific low-level keyword/topic (e.g. "react", "cooking", "travel", "ai", "history") that represents their primary interest based on their bio. This tag MUST be a single word (alphanumeric only, no spaces, hyphens, or special characters). This will be a system-level hidden tag.
         
         You MUST return a JSON object with this exact structure:
         {
-          "categories": ["Technology", "Travel"],
-          "tags": ["web development", "javascript", "react", "budget-travel"]
+          "categories": ["Technology"],
+          "tags": ["react"]
         }
         
         Only return the raw JSON object. Do not wrap it in markdown block quotes (such as \`\`\`json). Provide clean, parseable JSON.`;
@@ -89,8 +89,17 @@ export const register = async (req, res) => {
               subscribedCategories = filtered;
             }
           }
-          if (parsed.tags && Array.isArray(parsed.tags)) {
-            hiddenTags = parsed.tags.map(t => String(t).toLowerCase().trim()).filter(Boolean);
+          if (parsed.tags) {
+            let tagStr = '';
+            if (Array.isArray(parsed.tags)) {
+              tagStr = parsed.tags[0] || '';
+            } else if (typeof parsed.tags === 'string') {
+              tagStr = parsed.tags;
+            }
+            const singleTag = String(tagStr).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            if (singleTag) {
+              hiddenTags = [singleTag];
+            }
           }
         }
       } catch (aiErr) {

@@ -7,6 +7,7 @@ import Community from '../models/Community.js';
 import Quiz from '../models/Quiz.js';
 import { checkRestrictedContent } from './restrictedWordController.js';
 import { recalculateReputation } from './userController.js';
+import { recommendationEngine } from '../services/ai/recommendationEngine.js';
 
 const sanitizeBlogObject = (blogDoc) => {
   if (!blogDoc) return null;
@@ -155,8 +156,13 @@ export const createBlog = async (req, res) => {
   try {
     const { title, content, coverImage, category, tags, status, collaborators, community, isAnonymous, scheduledPublishTime } = req.body;
 
+    // Normalize tags to be single-word lowercase alphanumeric values
+    const normalizedTags = (tags || [])
+      .map(t => String(t).trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean);
+
     // Check restricted content
-    let textToValidate = `${title || ''} ${category || ''} ${tags ? tags.join(' ') : ''}`;
+    let textToValidate = `${title || ''} ${category || ''} ${normalizedTags.join(' ')}`;
     if (content) {
       try {
         const parsed = JSON.parse(content);
@@ -220,7 +226,7 @@ export const createBlog = async (req, res) => {
       coverImage: coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800',
       author: req.user._id,
       category: category || '',
-      tags: tags || [],
+      tags: normalizedTags,
       status: status || 'draft',
       collaborators: collaborators || [],
       community: community || null,
@@ -369,8 +375,13 @@ export const updateBlog = async (req, res) => {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
+    // Normalize tags to be single-word lowercase alphanumeric values if provided
+    const normalizedTags = tags !== undefined
+      ? tags.map(t => String(t).trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean)
+      : undefined;
+
     // Check restricted content
-    let textToValidate = `${title !== undefined ? title : blog.title} ${category !== undefined ? category : blog.category} ${(tags !== undefined ? tags : blog.tags || []).join(' ')}`;
+    let textToValidate = `${title !== undefined ? title : blog.title} ${category !== undefined ? category : blog.category} ${(normalizedTags !== undefined ? normalizedTags : blog.tags || []).join(' ')}`;
     const finalContent = content !== undefined ? content : blog.content;
     if (finalContent) {
       try {
@@ -441,7 +452,7 @@ export const updateBlog = async (req, res) => {
     blog.content = content !== undefined ? content : blog.content;
     blog.coverImage = coverImage !== undefined ? coverImage : blog.coverImage;
     blog.category = category !== undefined ? category : blog.category;
-    blog.tags = tags !== undefined ? tags : blog.tags;
+    blog.tags = normalizedTags !== undefined ? normalizedTags : blog.tags;
     blog.status = status !== undefined ? status : blog.status;
     blog.scheduledPublishTime = finalScheduledPublishTime;
     blog.community = community !== undefined ? community : blog.community;
@@ -577,82 +588,39 @@ export const likeBlog = async (req, res) => {
 export const getRecommendations = async (req, res) => {
   try {
     const userId = req.user ? req.user._id : null;
-    let preferredCategories = ['Technology', 'Education', 'Travel'];
-    let preferredTags = [];
-    let followedAuthors = [];
-    let communityIds = [];
-
-    if (userId) {
-      const user = await User.findById(userId);
-      if (user) {
-        followedAuthors = user.following || [];
-        
-        // Include subscribed categories
-        if (user.subscribedCategories && user.subscribedCategories.length > 0) {
-          preferredCategories = [...new Set([...preferredCategories, ...user.subscribedCategories])];
-        }
-
-        // Find blogs the user has liked
-        const likedBlogs = await Blog.find({ likes: userId });
-        if (likedBlogs.length > 0) {
-          preferredCategories = [...new Set([...preferredCategories, ...likedBlogs.map(b => b.category)])];
-          preferredTags = [...new Set([...preferredTags, ...likedBlogs.flatMap(b => b.tags)])];
-        }
-
-        // Include categories and tags from bookmarked blogs
-        if (user.savedBlogs && user.savedBlogs.length > 0) {
-          const savedBlogs = await Blog.find({ _id: { $in: user.savedBlogs } });
-          preferredCategories = [...new Set([...preferredCategories, ...savedBlogs.map(b => b.category)])];
-          preferredTags = [...new Set([...preferredTags, ...savedBlogs.flatMap(b => b.tags)])];
-        }
-
-        // Find communities the user is a member of
-        const userCommunities = await Community.find({ members: userId }).select('_id');
-        communityIds = userCommunities.map(c => c._id);
-      }
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required.' });
     }
 
-    // Query for recommendations
-    const query = {
-      status: 'published',
-      author: { $ne: userId } // Exclude own blogs
-    };
+    // Retrieve personalized feed from the recommendation engine
+    const { blogs: personalizedFeed } = await recommendationEngine.getPersonalizedFeed(userId, { limit: 10 });
+    let recommended = personalizedFeed || [];
 
-    const conditions = [];
-    if (followedAuthors.length > 0) conditions.push({ author: { $in: followedAuthors } });
-    if (preferredCategories.length > 0) conditions.push({ category: { $in: preferredCategories } });
-    if (preferredTags.length > 0) conditions.push({ tags: { $in: preferredTags } });
-    if (communityIds.length > 0) conditions.push({ community: { $in: communityIds } });
-
-    if (conditions.length > 0) {
-      query.$or = conditions;
-    }
-
-    let recommended = await Blog.find(query)
-      .populate('author', 'name profileImage badge')
-      .populate('collaborators', 'name profileImage')
-      .limit(10);
-
-    // If we have less than 5 recommendations, grab any popular published articles
-    if (recommended.length < 5) {
+    // Ensure we exclude the user's own blogs and get at least 10 blogs
+    if (recommended.length < 10) {
       const remainingCount = 10 - recommended.length;
       const idsToExclude = recommended.map(b => b._id);
-      if (userId) idsToExclude.push(userId);
+      idsToExclude.push(userId); // Exclude the user's own id
 
       const generalBlogs = await Blog.find({
         status: 'published',
-        _id: { $notin: idsToExclude },
+        _id: { $nin: idsToExclude },
         author: { $ne: userId }
       })
-      .populate('author', 'name profileImage badge')
-      .populate('collaborators', 'name profileImage')
+      .populate('author', 'name username profileImage isVerified badge')
+      .populate('community', 'name slug avatar')
       .sort({ views: -1, likes: -1 })
       .limit(remainingCount);
 
       recommended = recommended.concat(generalBlogs);
     }
 
-    const sanitizedRecommended = recommended.map(b => sanitizeBlogObject(b));
+    // Populate collaborators for all recommendations
+    const populated = await Blog.populate(recommended, [
+      { path: 'collaborators', select: 'name profileImage' }
+    ]);
+
+    const sanitizedRecommended = populated.map(b => sanitizeBlogObject(b));
     res.status(200).json({ blogs: sanitizedRecommended });
   } catch (error) {
     res.status(500).json({ error: error.message });

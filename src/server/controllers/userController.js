@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Blog from '../models/Blog.js';
 import Notification from '../models/Notification.js';
 import Comment from '../models/Comment.js';
+import axios from 'axios';
 
 export const getPublicAuthors = async (req, res) => {
   try {
@@ -172,7 +173,72 @@ export const updateOwnProfile = async (req, res) => {
     }
 
     if (name !== undefined) user.name = name;
-    if (bio !== undefined) user.bio = bio;
+    
+    if (bio !== undefined) {
+      const oldBio = user.bio || '';
+      user.bio = bio.trim();
+      
+      // If bio actually changed and is not empty, reclassify
+      if (user.bio !== oldBio && user.bio.length > 0) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (apiKey) {
+          try {
+            const aiPrompt = `Analyze the following user profile bio: "${user.bio}"
+            
+            Tasks:
+            1. Classify their high-level interests into one or more of these standard categories: ["Technology", "Travel", "Food", "Education", "Sports"].
+            2. Extrapolate exactly ONE specific low-level keyword/topic (e.g. "react", "cooking", "travel", "ai", "history") that represents their primary interest based on their bio. This tag MUST be a single word (alphanumeric only, no spaces, hyphens, or special characters). This will be a system-level hidden tag.
+            
+            You MUST return a JSON object with this exact structure:
+            {
+              "categories": ["Technology"],
+              "tags": ["react"]
+            }
+            
+            Only return the raw JSON object. Do not wrap it in markdown block quotes (such as \`\`\`json). Provide clean, parseable JSON.`;
+
+            const aiResponse = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+              contents: [{ parts: [{ text: aiPrompt }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            }, {
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            const rawText = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (rawText) {
+              let cleanText = rawText;
+              if (cleanText.startsWith('```')) {
+                cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+              }
+              const parsed = JSON.parse(cleanText);
+              
+              if (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+                const validCategories = ['Technology', 'Travel', 'Food', 'Education', 'Sports'];
+                const filtered = parsed.categories.filter(cat => validCategories.includes(cat));
+                if (filtered.length > 0) {
+                  user.subscribedCategories = filtered;
+                }
+              }
+              if (parsed.tags) {
+                let tagStr = '';
+                if (Array.isArray(parsed.tags)) {
+                  tagStr = parsed.tags[0] || '';
+                } else if (typeof parsed.tags === 'string') {
+                  tagStr = parsed.tags;
+                }
+                const singleTag = String(tagStr).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                if (singleTag) {
+                  user.hiddenTags = [singleTag];
+                }
+              }
+            }
+          } catch (aiErr) {
+            console.error('AI Bio Re-classification failed:', aiErr.message);
+          }
+        }
+      }
+    }
+
     if (profileImage !== undefined) user.profileImage = profileImage;
     if (isPrivate !== undefined) user.isPrivate = isPrivate;
     if (socialLinks !== undefined) {
