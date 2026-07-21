@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { updateCurrentUser } from '../redux/authSlice.js';
 import { setAddToCollectionModal } from '../redux/collectionSlice';
+import { getCoverImageForBlog } from '../utils/imageUtils';
 
 const parseInlineMarkdown = (text) => {
   if (!text) return '';
@@ -1235,14 +1236,10 @@ export default function BlogDetail() {
       {/* Cover Image */}
       <div className="max-h-[380px] w-full rounded-3xl overflow-hidden shadow-md bg-slate-100 dark:bg-slate-800 mb-8 border border-slate-100 dark:border-slate-800">
         <img
-          src={(() => {
-            const src = blog.coverImage || '';
-            const md = src.match(/!\[.*?\]\((.*?)\)/);
-            return (md ? md[1] : src.trim()) || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800';
-          })()}
+          src={getCoverImageForBlog(blog)}
           alt={blog.title}
           className="w-full max-h-[380px] object-cover object-center"
-          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800'; }}
+          onError={(e) => { e.target.src = getCoverImageForBlog({ title: blog.title + 'alt' }); }}
         />
       </div>
 

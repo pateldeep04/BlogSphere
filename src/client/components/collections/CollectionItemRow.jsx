@@ -1,5 +1,6 @@
 import React from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
+import { getCoverImageForBlog } from '../../utils/imageUtils';
 
 export default function CollectionItemRow({ 
   index, 
@@ -11,7 +12,7 @@ export default function CollectionItemRow({
   onDragEnd 
 }) {
   const blog = item.blog || {};
-  const coverUrl = blog.coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=200';
+  const coverUrl = getCoverImageForBlog(blog);
 
   return (
     <div
@@ -36,7 +37,7 @@ export default function CollectionItemRow({
         src={coverUrl}
         alt={blog.title || 'Article'}
         className="w-12 h-12 rounded-xl object-cover border border-slate-200/60 dark:border-slate-800 shrink-0"
-        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=200'; }}
+        onError={(e) => { e.target.src = getCoverImageForBlog({ title: (blog.title || '') + 'alt' }); }}
       />
 
       {/* Title & Notes Input */}

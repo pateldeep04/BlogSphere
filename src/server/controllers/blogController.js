@@ -273,7 +273,7 @@ export const createBlog = async (req, res) => {
       title,
       slug,
       content,
-      coverImage: coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800',
+      coverImage: coverImage || '',
       author: req.user._id,
       category: category || '',
       tags: normalizedTags,
