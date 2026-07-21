@@ -214,6 +214,7 @@ export default function BlogDetail() {
   const podcastSynthRef = useRef(window.speechSynthesis || null);
   const podcastUtteranceRef = useRef(null);
   const [podcastPaused, setPodcastPaused] = useState(false);
+  const isPodcastPlayingRef = useRef(false);
 
   // Preload voices so they are available on first play
   useEffect(() => {
@@ -423,7 +424,8 @@ export default function BlogDetail() {
 
   // Speak a single podcast line via Web Speech API, then advance to next
   const speakPodcastLine = (index) => {
-    if (!podcastSynthRef.current || index >= podcastScript.length) {
+    if (!podcastSynthRef.current || index >= podcastScript.length || !isPodcastPlayingRef.current) {
+      isPodcastPlayingRef.current = false;
       setIsPlayingPodcast(false);
       stopVisualizer();
       return;
@@ -459,26 +461,45 @@ export default function BlogDetail() {
     }
 
     utter.onstart = () => {
+      if (!isPodcastPlayingRef.current) {
+        podcastSynthRef.current?.cancel();
+        return;
+      }
       setPodcastLineIndex(index);
       startVisualizer();
     };
 
     utter.onend = () => {
+      // If user clicked Stop or Pause while utterance was playing, DO NOT continue to next line
+      if (!isPodcastPlayingRef.current) {
+        return;
+      }
+
       if (index < podcastScript.length - 1) {
         speakPodcastLine(index + 1);
       } else {
         // Episode finished
+        isPodcastPlayingRef.current = false;
         setIsPlayingPodcast(false);
         setPodcastLineIndex(0);
         stopVisualizer();
       }
     };
 
-    utter.onerror = () => {
-      // On error, try advancing anyway
+    utter.onerror = (e) => {
+      // If stopped or cancelled by user, DO NOT advance
+      if (!isPodcastPlayingRef.current || e.error === 'interrupted' || e.error === 'canceled') {
+        return;
+      }
+
       if (index < podcastScript.length - 1) {
-        setTimeout(() => speakPodcastLine(index + 1), 500);
+        setTimeout(() => {
+          if (isPodcastPlayingRef.current) {
+            speakPodcastLine(index + 1);
+          }
+        }, 500);
       } else {
+        isPodcastPlayingRef.current = false;
         setIsPlayingPodcast(false);
         stopVisualizer();
       }
@@ -553,20 +574,24 @@ export default function BlogDetail() {
       setPodcastLineIndex(0);
     }
 
+    isPodcastPlayingRef.current = true;
     setPodcastPaused(false);
     setIsPlayingPodcast(true);
     speakPodcastLine(targetIndex);
   };
 
   const handlePodcastPause = () => {
+    isPodcastPlayingRef.current = false;
     if (podcastSynthRef.current) {
       podcastSynthRef.current.cancel();
     }
+    setIsPlayingPodcast(false);
     setPodcastPaused(true);
     stopVisualizer();
   };
 
   const handlePodcastStop = () => {
+    isPodcastPlayingRef.current = false;
     if (podcastSynthRef.current) {
       podcastSynthRef.current.cancel();
     }
@@ -579,6 +604,7 @@ export default function BlogDetail() {
   // Cleanup podcast speech synthesis on tab switch
   useEffect(() => {
     if (activeAITab !== 'podcast') {
+      isPodcastPlayingRef.current = false;
       if (podcastSynthRef.current) podcastSynthRef.current.cancel();
       setIsPlayingPodcast(false);
       setPodcastPaused(false);
