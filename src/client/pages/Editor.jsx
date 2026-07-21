@@ -958,8 +958,36 @@ export default function Editor() {
 
   // Save Blog
   const handleSave = async (publishStatus = 'draft') => {
-    if (!title.trim() || !content.trim()) {
-      return setError('Title and Content cannot be empty.');
+    // Client-side input validation
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      return setError('Please enter a title for your article.');
+    }
+    if (trimmedTitle.length < 3) {
+      return setError('Article title must be at least 3 characters long.');
+    }
+    if (trimmedTitle.length > 150) {
+      return setError('Article title cannot exceed 150 characters.');
+    }
+
+    const hasText = blocks.some(b => b.content && b.content.trim().length > 0);
+    if (!hasText) {
+      return setError('Please add some text content to your article blocks before saving.');
+    }
+
+    if (publishStatus === 'scheduled' || isScheduled) {
+      if (!scheduledTime) {
+        return setError('Please select a scheduled publish date and time.');
+      }
+      const schedDate = new Date(scheduledTime);
+      const now = new Date();
+      const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (schedDate <= now) {
+        return setError('Scheduled publish time must be in the future.');
+      }
+      if (schedDate > maxDate) {
+        return setError('Scheduled publish time must be within 7 days from now.');
+      }
     }
 
     // Intercept with spam check if publishing

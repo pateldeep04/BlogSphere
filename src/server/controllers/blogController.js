@@ -182,12 +182,44 @@ Only return the JSON object, do not include any markdown backticks or explanatio
 
 export const createBlog = async (req, res) => {
   try {
-    const { title, content, coverImage, category, tags, status, collaborators, community, isAnonymous, scheduledPublishTime } = req.body;
+    // Server-Side Input Validations
+    if (!title || typeof title !== 'string' || title.trim().length < 3) {
+      return res.status(400).json({ error: 'Title is required and must be at least 3 characters long.' });
+    }
+    if (title.trim().length > 150) {
+      return res.status(400).json({ error: 'Title cannot exceed 150 characters.' });
+    }
+
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Content is required.' });
+    }
+    let hasTextContent = false;
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        hasTextContent = parsed.some(b => b.content && b.content.trim().length > 0);
+      } else {
+        hasTextContent = content.trim().length > 0;
+      }
+    } catch (e) {
+      hasTextContent = content.trim().length > 0;
+    }
+    if (!hasTextContent) {
+      return res.status(400).json({ error: 'Please add text content to your article blocks.' });
+    }
+
+    if (status && !['draft', 'published', 'scheduled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Allowed values: draft, published, scheduled.' });
+    }
 
     // Normalize tags to be single-word lowercase alphanumeric values
     const normalizedTags = (tags || [])
       .map(t => String(t).trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
       .filter(Boolean);
+
+    if (normalizedTags.length > 15) {
+      return res.status(400).json({ error: 'Maximum 15 tags are allowed per article.' });
+    }
 
     // Check restricted content
     let textToValidate = `${title || ''} ${category || ''} ${normalizedTags.join(' ')}`;
@@ -392,6 +424,40 @@ export const updateBlog = async (req, res) => {
     const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    // Server-Side Input Validations
+    if (title !== undefined) {
+      if (typeof title !== 'string' || title.trim().length < 3) {
+        return res.status(400).json({ error: 'Title must be at least 3 characters long.' });
+      }
+      if (title.trim().length > 150) {
+        return res.status(400).json({ error: 'Title cannot exceed 150 characters.' });
+      }
+    }
+
+    if (content !== undefined) {
+      if (typeof content !== 'string' || !content.trim()) {
+        return res.status(400).json({ error: 'Content cannot be empty.' });
+      }
+      let hasTextContent = false;
+      try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+          hasTextContent = parsed.some(b => b.content && b.content.trim().length > 0);
+        } else {
+          hasTextContent = content.trim().length > 0;
+        }
+      } catch (e) {
+        hasTextContent = content.trim().length > 0;
+      }
+      if (!hasTextContent) {
+        return res.status(400).json({ error: 'Please add text content to your article blocks.' });
+      }
+    }
+
+    if (status !== undefined && !['draft', 'published', 'scheduled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Allowed values: draft, published, scheduled.' });
     }
 
     // Normalize tags to be single-word lowercase alphanumeric values if provided
