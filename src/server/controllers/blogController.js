@@ -25,6 +25,33 @@ const sanitizeBlogObject = (blogDoc) => {
   return b;
 };
 
+// Helper to generate clean, concise, 100% unique slugs with random unique ID suffix
+const generateUniqueSlug = async (title) => {
+  let words = (title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  // Limit base slug to first 5 key words (~40 chars max)
+  let shortBase = words.slice(0, 5).join('-');
+  if (!shortBase) shortBase = 'post';
+
+  // 6-char random alphanumeric unique ID
+  const uniqueId = Math.random().toString(36).substring(2, 8);
+  let slug = `${shortBase}-${uniqueId}`;
+
+  // Extra safety check in DB
+  let count = 0;
+  while (await Blog.findOne({ slug })) {
+    count++;
+    slug = `${shortBase}-${uniqueId}${count}`;
+  }
+
+  return slug;
+};
+
 // Free translation helper via google translate API
 const translateText = async (text, targetLang) => {
   if (!text) return '';
@@ -201,18 +228,8 @@ export const createBlog = async (req, res) => {
       finalScheduledPublishTime = schedTime;
     }
 
-    // Generate unique slug
-    let baseSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    
-    let slug = baseSlug || 'untitled';
-    let count = 0;
-    while (await Blog.findOne({ slug })) {
-      count++;
-      slug = `${baseSlug}-${count}`;
-    }
+    // Generate unique concise slug with unique ID
+    const slug = await generateUniqueSlug(title);
 
     // Convert reader to author if they create/draft a post
     if (req.user.role === 'reader') {
@@ -347,7 +364,8 @@ export const getBlogBySlug = async (req, res) => {
 
     // Fall back to slug lookup if not found or not an ObjectId
     if (!blog) {
-      blog = await Blog.findOne({ slug })
+      const decodedSlug = decodeURIComponent(slug);
+      blog = await Blog.findOne({ $or: [{ slug: decodedSlug }, { slug }] })
         .populate('author', 'name username profileImage bio followers reputationPoints badge newsletterSubscribers')
         .populate('collaborators', 'name username profileImage email');
     }
