@@ -958,8 +958,36 @@ export default function Editor() {
 
   // Save Blog
   const handleSave = async (publishStatus = 'draft') => {
-    if (!title.trim() || !content.trim()) {
-      return setError('Title and Content cannot be empty.');
+    // Client-side input validation
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      return setError('Please enter a title for your article.');
+    }
+    if (trimmedTitle.length < 3) {
+      return setError('Article title must be at least 3 characters long.');
+    }
+    if (trimmedTitle.length > 150) {
+      return setError('Article title cannot exceed 150 characters.');
+    }
+
+    const hasText = blocks.some(b => b.content && b.content.trim().length > 0);
+    if (!hasText) {
+      return setError('Please add some text content to your article blocks before saving.');
+    }
+
+    if (publishStatus === 'scheduled' || isScheduled) {
+      if (!scheduledTime) {
+        return setError('Please select a scheduled publish date and time.');
+      }
+      const schedDate = new Date(scheduledTime);
+      const now = new Date();
+      const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (schedDate <= now) {
+        return setError('Scheduled publish time must be in the future.');
+      }
+      if (schedDate > maxDate) {
+        return setError('Scheduled publish time must be within 7 days from now.');
+      }
     }
 
     // Intercept with spam check if publishing
@@ -1622,6 +1650,61 @@ export default function Editor() {
             {/* Metadata configurations */}
             <div className="p-5 border rounded-2xl bg-white border-slate-100 dark:bg-slate-900/60 glass-card">
               <h3 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Post Settings</h3>
+
+              {/* Cover Image Selector */}
+              <div className="mb-5">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Article Cover Image</label>
+                <input
+                  type="text"
+                  placeholder="Paste Unsplash or Image URL..."
+                  value={coverImage}
+                  onChange={(e) => setCoverImage(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none mb-2"
+                />
+
+                {/* Preset cover image samples */}
+                <div className="space-y-1.5">
+                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Or Pick a Preset Cover:</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=400',
+                      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400'
+                    ].map((imgUrl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setCoverImage(imgUrl)}
+                        className={`h-10 rounded-lg overflow-hidden border-2 transition-all ${
+                          coverImage === imgUrl ? 'border-primary-500 scale-105 shadow-md' : 'border-transparent opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={imgUrl} alt="Preset cover" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cover image live preview */}
+                {coverImage && (
+                  <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    <img src={coverImage} alt="Cover preview" className="w-full h-24 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setCoverImage('')}
+                      className="absolute top-1.5 right-1.5 p-1 bg-slate-900/80 text-white rounded-full hover:bg-rose-600 transition-colors"
+                      title="Clear Cover Image"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Community selector */}
               <div className="mb-4">

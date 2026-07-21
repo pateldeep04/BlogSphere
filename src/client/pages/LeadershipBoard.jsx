@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, TrendingUp, Users, Target, DollarSign, Clock, ArrowUp, ArrowDown, Minus, Medal, Star, Flame } from 'lucide-react';
+import { Trophy, TrendingUp, Users, Target, Clock, Medal, Star, Flame, Eye, Heart, MessageSquare, ArrowUp, X } from 'lucide-react';
 import api from '../utils/api.js';
 
 export default function LeadershipBoard() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('all');
-  const [activeTab, setActiveTab] = useState('earnings');
+  const [activeTab, setActiveTab] = useState('views');
   const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchLeaderboard = async () => {
@@ -25,14 +25,11 @@ export default function LeadershipBoard() {
     fetchLeaderboard();
   }, [timeRange]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
-  };
-
   const formatNumber = (num) => {
+    if (!num) return '0';
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
+    return num.toLocaleString();
   };
 
   const getRankIcon = (rank) => {
@@ -43,19 +40,19 @@ export default function LeadershipBoard() {
   };
 
   const getRankClass = (rank) => {
-    if (rank === 1) return 'bg-gradient-to-r from-amber-400 to-amber-600 text-white';
-    if (rank === 2) return 'bg-gradient-to-r from-slate-300 to-slate-500 text-white';
-    if (rank === 3) return 'bg-gradient-to-r from-amber-700 to-amber-900 text-white';
+    if (rank === 1) return 'bg-gradient-to-r from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/20';
+    if (rank === 2) return 'bg-gradient-to-r from-slate-300 to-slate-500 text-white shadow-md shadow-slate-500/20';
+    if (rank === 3) return 'bg-gradient-to-r from-amber-700 to-amber-900 text-white shadow-md shadow-amber-800/20';
     return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
   };
 
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-16 animate-pulse space-y-8">
-        <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+        <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl w-1/2" />
         <div className="grid grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+            <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
           ))}
         </div>
         <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
@@ -64,30 +61,41 @@ export default function LeadershipBoard() {
   }
 
   const tabs = [
-    { id: 'earnings', label: 'Top Earners', icon: DollarSign },
-    { id: 'posts', label: 'Most Posts', icon: Target },
     { id: 'views', label: 'Most Views', icon: TrendingUp },
     { id: 'engagement', label: 'Top Engagement', icon: Flame },
+    { id: 'posts', label: 'Most Posts', icon: Target },
   ];
+
+  // Sort leaderboard based on active tab
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+    if (activeTab === 'posts') return (b.totalPosts || 0) - (a.totalPosts || 0);
+    if (activeTab === 'engagement') {
+      const scoreA = (a.totalLikes || 0) + (a.totalReactions || 0) + (a.totalComments || 0) * 2;
+      const scoreB = (b.totalLikes || 0) + (b.totalReactions || 0) + (b.totalComments || 0) * 2;
+      return scoreB - scoreA;
+    }
+    return (b.totalViews || 0) - (a.totalViews || 0);
+  });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+      {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
             <Trophy className="w-8 h-8 text-amber-500" />
             Leadership Board
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Community rankings based on content performance and engagement
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            Community rankings based on content performance, readership, and engagement
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Time Range:</span>
+          <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Time Range:</span>
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 text-sm border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-4 py-2 text-sm border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
           >
             <option value="all">All Time</option>
             <option value="month">This Month</option>
@@ -97,15 +105,16 @@ export default function LeadershipBoard() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
               activeTab === tab.id
-                ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -114,41 +123,38 @@ export default function LeadershipBoard() {
         ))}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden">
+      {/* Table Container */}
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200/60 dark:border-slate-800">
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Rank</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Creator</th>
-                {activeTab === 'earnings' && (
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-right">Est. Earnings</th>
-                )}
-                {activeTab === 'posts' && (
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">Posts</th>
-                )}
                 {activeTab === 'views' && (
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">Total Views</th>
                 )}
                 {activeTab === 'engagement' && (
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">Engagement Score</th>
                 )}
+                {activeTab === 'posts' && (
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">Total Articles</th>
+                )}
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {leaderboard.length === 0 ? (
+              {sortedLeaderboard.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="font-medium">No data available for this period</p>
-                    <p className="text-sm mt-1">Start writing to climb the ranks!</p>
+                    <p className="font-semibold">No creators found for this period</p>
+                    <p className="text-xs mt-1">Start publishing articles to appear on the leaderboard!</p>
                   </td>
                 </tr>
               ) : (
-                leaderboard.map((user, index) => {
+                sortedLeaderboard.map((user, index) => {
                   const rank = index + 1;
-                  const earnings = user.estimatedEarnings || 0;
                   const totalViews = user.totalViews || 0;
                   const totalPosts = user.totalPosts || 0;
                   const totalLikes = user.totalLikes || 0;
@@ -156,17 +162,12 @@ export default function LeadershipBoard() {
                   const totalComments = user.totalComments || 0;
                   const engagementScore = totalLikes + totalReactions + totalComments * 2;
 
-                  let sortValue = earnings;
-                  if (activeTab === 'posts') sortValue = totalPosts;
-                  if (activeTab === 'views') sortValue = totalViews;
-                  if (activeTab === 'engagement') sortValue = engagementScore;
-
                   return (
                     <tr
                       key={user._id}
                       onClick={() => setSelectedUser(user)}
-                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
-                        rank <= 3 ? 'bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/10' : ''
+                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer ${
+                        rank <= 3 ? 'bg-gradient-to-r from-amber-50/30 to-transparent dark:from-amber-950/10' : ''
                       }`}
                     >
                       <td className="px-6 py-4">
@@ -179,40 +180,36 @@ export default function LeadershipBoard() {
                           <img
                             src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`}
                             alt={user.name}
-                            className="w-10 h-10 rounded-full object-cover ring-2 ring-primary-500/20"
+                            className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/20"
                           />
                           <div>
-                            <p className="font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                            <p className="text-xs text-slate-400 capitalize">@{user.username} · {user.role}</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">{user.name}</p>
+                            <p className="text-xs text-slate-400 capitalize">@{user.username || 'creator'} · {user.role || 'Author'}</p>
                           </div>
                         </div>
                       </td>
-                      {activeTab === 'earnings' && (
-                        <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400 text-lg">
-                          {formatCurrency(earnings)}
-                        </td>
-                      )}
-                      {activeTab === 'posts' && (
-                        <td className="px-6 py-4 text-center font-bold text-primary-600 dark:text-primary-400 text-lg">
-                          {totalPosts}
-                        </td>
-                      )}
                       {activeTab === 'views' && (
-                        <td className="px-6 py-4 text-center font-bold text-sky-600 dark:text-sky-400 text-lg">
+                        <td className="px-6 py-4 text-center font-extrabold text-sky-600 dark:text-sky-400 text-base">
                           {formatNumber(totalViews)}
                         </td>
                       )}
                       {activeTab === 'engagement' && (
-                        <td className="px-6 py-4 text-center font-bold text-rose-600 dark:text-rose-400 text-lg">
+                        <td className="px-6 py-4 text-center font-extrabold text-rose-600 dark:text-rose-400 text-base">
                           {formatNumber(engagementScore)}
+                        </td>
+                      )}
+                      {activeTab === 'posts' && (
+                        <td className="px-6 py-4 text-center font-extrabold text-indigo-600 dark:text-indigo-400 text-base">
+                          {totalPosts}
                         </td>
                       )}
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedUser(user); }}
-                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium flex items-center gap-1 justify-end"
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold inline-flex items-center gap-1 justify-end"
                         >
-                          View Details <ArrowUp className="w-4 h-4" />
+                          <span>View Performance</span>
+                          <ArrowUp className="w-3.5 h-3.5 rotate-45" />
                         </button>
                       </td>
                     </tr>
@@ -223,93 +220,83 @@ export default function LeadershipBoard() {
           </table>
         </div>
 
-        {leaderboard.length > 0 && (
-          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-            <div className="grid grid-cols-4 gap-4 text-center">
+        {/* Summary Footer */}
+        {sortedLeaderboard.length > 0 && (
+          <div className="px-6 py-4 border-t border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{leaderboard.length}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Active Creators</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{sortedLeaderboard.length}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Creators</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(leaderboard.reduce((sum, u) => sum + (u.estimatedEarnings || 0), 0))}
+                <p className="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400">
+                  {formatNumber(sortedLeaderboard.reduce((sum, u) => sum + (u.totalViews || 0), 0))}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Total Earnings</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Views</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                  {formatNumber(leaderboard.reduce((sum, u) => sum + (u.totalPosts || 0), 0))}
+                <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  {formatNumber(sortedLeaderboard.reduce((sum, u) => sum + (u.totalPosts || 0), 0))}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Total Posts</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">
-                  {formatNumber(leaderboard.reduce((sum, u) => sum + (u.totalViews || 0), 0))}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Total Views</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published Articles</p>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+      {/* Info Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
             <Star className="w-5 h-5 text-amber-500" />
-            Earnings Formula
+            <span>Reputation & Badges System</span>
           </h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between items-center p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl">
-              <span className="flex items-center gap-2 text-sky-700 dark:text-sky-400"><span>👁️</span> Per View</span>
-              <span className="font-bold text-sky-600 dark:text-sky-400">$0.005</span>
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center p-3 bg-sky-50 dark:bg-sky-950/30 rounded-2xl border border-sky-100/50 dark:border-sky-900/30">
+              <span className="flex items-center gap-2 font-semibold text-sky-700 dark:text-sky-400"><span>👁️</span> Article Views</span>
+              <span className="font-bold text-sky-600 dark:text-sky-400">+50 Points / 1K Views</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl">
-              <span className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400"><span>📝</span> Per Post</span>
-              <span className="font-bold text-indigo-600 dark:text-indigo-400">$0.25</span>
+            <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30">
+              <span className="flex items-center gap-2 font-semibold text-indigo-700 dark:text-indigo-400"><span>📝</span> Published Posts</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-400">+50 Points / Post</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-rose-50 dark:bg-rose-950/30 rounded-xl">
-              <span className="flex items-center gap-2 text-rose-700 dark:text-rose-400"><span>❤️</span> Per Like</span>
-              <span className="font-bold text-rose-600 dark:text-rose-400">$0.10</span>
+            <div className="flex justify-between items-center p-3 bg-rose-50 dark:bg-rose-950/30 rounded-2xl border border-rose-100/50 dark:border-rose-900/30">
+              <span className="flex items-center gap-2 font-semibold text-rose-700 dark:text-rose-400"><span>❤️</span> Likes & Reactions</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">+10 Points / Like</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl">
-              <span className="flex items-center gap-2 text-amber-700 dark:text-amber-400"><span>🎉</span> Per Reaction</span>
-              <span className="font-bold text-amber-600 dark:text-amber-400">$0.05</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-violet-50 dark:bg-violet-950/30 rounded-xl">
-              <span className="flex items-center gap-2 text-violet-700 dark:text-violet-400"><span>💬</span> Per Comment</span>
-              <span className="font-bold text-violet-600 dark:text-violet-400">$0.02</span>
+            <div className="flex justify-between items-center p-3 bg-violet-50 dark:bg-violet-950/30 rounded-2xl border border-violet-100/50 dark:border-violet-900/30">
+              <span className="flex items-center gap-2 font-semibold text-violet-700 dark:text-violet-400"><span>💬</span> Reader Comments</span>
+              <span className="font-bold text-violet-600 dark:text-violet-400">+5 Points / Comment</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:col-span-2">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary-500" />
-            How Rankings Work
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-indigo-500" />
+            <span>How Leaderboard Works</span>
           </h3>
-          <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs flex-shrink-0">1</div>
-              <span>Earnings are calculated based on your content's performance metrics</span>
+          <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
+            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+              <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-extrabold text-[10px] flex items-center justify-center flex-shrink-0">1</div>
+              <span>Rankings dynamically aggregate creator performance across readership, post count, and audience reactions.</span>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs flex-shrink-0">2</div>
-              <span>Switch tabs to see rankings by posts, views, or engagement</span>
+            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+              <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-extrabold text-[10px] flex items-center justify-center flex-shrink-0">2</div>
+              <span>Switch between Views, Engagement, and Articles tabs to view specialized rankings.</span>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs flex-shrink-0">3</div>
-              <span>Click any creator to see their detailed breakdown and top performing post</span>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs flex-shrink-0">4</div>
-              <span>Rankings update in real-time as you publish and engage</span>
+            <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+              <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-extrabold text-[10px] flex items-center justify-center flex-shrink-0">3</div>
+              <span>Click on any creator row to view detailed performance metrics and their top performing article.</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Creator Details Modal */}
       {selectedUser && (
-        <EarningsBreakdownModal
+        <CreatorDetailsModal
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
         />
@@ -318,71 +305,101 @@ export default function LeadershipBoard() {
   );
 }
 
-function EarningsBreakdownModal({ user, onClose }) {
+function CreatorDetailsModal({ user, onClose }) {
   if (!user) return null;
 
-  const breakdown = user.breakdown || {
-    fromViews: (user.totalViews || 0) * 0.005,
-    fromPosts: (user.totalPosts || 0) * 0.25,
-    fromLikes: (user.totalLikes || 0) * 0.10,
-    fromReactions: (user.totalReactions || 0) * 0.05,
-    fromComments: (user.totalComments || 0) * 0.02,
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
+  const formatNumber = (num) => {
+    if (!num) return '0';
+    return num.toLocaleString();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-5 flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-in fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name} className="w-10 h-10 rounded-full border-2 border-white/40 object-cover" />
+            <img
+              src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`}
+              alt={user.name}
+              className="w-11 h-11 rounded-full border-2 border-white/50 object-cover shadow-sm"
+            />
             <div>
               <p className="text-white font-extrabold text-sm">{user.name}</p>
-              <p className="text-white/70 text-xs">@{user.username}</p>
+              <p className="text-white/80 text-xs">@{user.username || 'creator'} · {user.role || 'Author'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white p-1">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Modal Body */}
         <div className="p-6 space-y-5">
           <div className="text-center">
-            <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(user.estimatedEarnings || 0)}
+            <p className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+              {formatNumber(user.totalViews || 0)}
             </p>
-            <p className="text-xs text-slate-400 mt-1">Estimated Total Earnings</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mt-0.5">Total Article Views</p>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Earnings Breakdown</p>
-            {[
-              { label: `${user.totalViews || 0} Views`, value: breakdown.fromViews, color: 'bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400', icon: '👁️' },
-              { label: `${user.totalPosts || 0} Posts`, value: breakdown.fromPosts, color: 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400', icon: '📝' },
-              { label: `${user.totalLikes || 0} Likes`, value: breakdown.fromLikes, color: 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400', icon: '❤️' },
-              { label: `${user.totalReactions || 0} Reactions`, value: breakdown.fromReactions, color: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400', icon: '🎉' },
-              { label: `${user.totalComments || 0} Comments`, value: breakdown.fromComments, color: 'bg-violet-100 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400', icon: '💬' },
-            ].map(item => (
-              <div key={item.label} className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${item.color}`}>
-                <span className="text-xs font-semibold flex items-center gap-2">
-                  <span>{item.icon}</span>
-                  {item.label}
-                </span>
-                <span className="text-xs font-extrabold">{formatCurrency(item.value)}</span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100/50 dark:border-indigo-900/30 flex items-center gap-3">
+              <Eye className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+              <div>
+                <span className="block text-sm font-extrabold text-indigo-700 dark:text-indigo-300">{formatNumber(user.totalViews || 0)}</span>
+                <span className="block text-[10px] font-bold text-indigo-400 uppercase">Views</span>
               </div>
-            ))}
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-100/50 dark:border-sky-900/30 flex items-center gap-3">
+              <Target className="w-5 h-5 text-sky-500 flex-shrink-0" />
+              <div>
+                <span className="block text-sm font-extrabold text-sky-700 dark:text-sky-300">{user.totalPosts || 0}</span>
+                <span className="block text-[10px] font-bold text-sky-400 uppercase">Articles</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-100/50 dark:border-rose-900/30 flex items-center gap-3">
+              <Heart className="w-5 h-5 text-rose-500 flex-shrink-0" />
+              <div>
+                <span className="block text-sm font-extrabold text-rose-700 dark:text-rose-300">{formatNumber((user.totalLikes || 0) + (user.totalReactions || 0))}</span>
+                <span className="block text-[10px] font-bold text-rose-400 uppercase">Reactions</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-violet-50/60 dark:bg-violet-950/30 border border-violet-100/50 dark:border-violet-900/30 flex items-center gap-3">
+              <MessageSquare className="w-5 h-5 text-violet-500 flex-shrink-0" />
+              <div>
+                <span className="block text-sm font-extrabold text-violet-700 dark:text-violet-300">{formatNumber(user.totalComments || 0)}</span>
+                <span className="block text-[10px] font-bold text-violet-400 uppercase">Comments</span>
+              </div>
+            </div>
           </div>
 
           {user.topPost && (
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">🏆 Top Performing Post</p>
-              <a href={`/blog/${user.topPost.slug}`} onClick={onClose} className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline line-clamp-2 block">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-500 flex items-center gap-1">
+                <span>🏆</span> Top Performing Article
+              </p>
+              <a
+                href={`/blog/${user.topPost.slug}`}
+                onClick={onClose}
+                className="text-xs font-bold text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors line-clamp-2 block leading-snug"
+              >
                 {user.topPost.title}
               </a>
-              <p className="text-[10px] text-slate-400 mt-0.5">{user.topPost.views?.toLocaleString() || 0} views</p>
+              <p className="text-[10px] text-slate-400 font-medium pt-0.5">{user.topPost.views?.toLocaleString() || 0} views</p>
             </div>
           )}
         </div>

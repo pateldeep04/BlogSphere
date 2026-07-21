@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAddToCollectionModal } from '../redux/collectionSlice';
 
+import { getCoverImageForBlog } from '../utils/imageUtils';
+
 // Clean text helper that handles both HTML and JSON block array structure
 const getCleanText = (content) => {
   if (!content) return '';
@@ -31,17 +33,6 @@ const getSnippet = (content) => {
   return text.substring(0, 130) + (text.length > 130 ? '...' : '');
 };
 
-// Sanitize image URL
-const sanitizeImageUrl = (src) => {
-  if (!src) return '';
-  const mdMatch = src.match(/!\[.*?\]\((.*?)\)/);
-  if (mdMatch) return mdMatch[1];
-  const linkMatch = src.match(/\[.*?\]\((.*?)\)/);
-  if (linkMatch) return linkMatch[1];
-  return src.trim();
-};
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&q=80&w=800';
 const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
 
 export default function BlogCard({ blog }) {
@@ -70,7 +61,7 @@ export default function BlogCard({ blog }) {
           src={imageUrl}
           alt={blog.title}
           className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
-          onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+          onError={(e) => { e.target.src = getCoverImageForBlog({ title: blog.title + 'alt' }); }}
         />
         {/* Category Badge */}
         {blog.category && (

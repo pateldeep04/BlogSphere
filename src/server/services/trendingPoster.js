@@ -149,7 +149,7 @@ export const generateTrendingAutoPost = async (force = false) => {
       category: articleData.category || 'Technology',
       tags: articleData.tags || ['AI', 'Tech'],
       status: 'published',
-      views: Math.floor(Math.random() * 50) + 10,
+      views: 0,
       createdAt: new Date(),
       updatedAt: new Date()
     });

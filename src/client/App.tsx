@@ -71,6 +71,9 @@ export default function App() {
                 <Route path="/collections/:slug" element={<CollectionDetail />} />
                 <Route path="/collections/new" element={<CollectionEditor />} />
                 <Route path="/collections/:id/edit" element={<CollectionEditor />} />
+                {/* Fallback routes for unknown or removed paths */}
+                <Route path="/galaxy" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
 
