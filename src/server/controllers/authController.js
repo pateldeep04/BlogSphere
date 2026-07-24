@@ -285,3 +285,12 @@ export const googleLogin = async (req, res) => {
     res.status(400).json({ error: 'Google login failed: ' + (error.response?.data?.error_description || error.message) });
   }
 };
+
+export const getGoogleClientId = async (req, res) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID || '';
+    res.status(200).json({ clientId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

@@ -31,6 +31,7 @@ export default function Auth() {
     bio: ''
   });
   const [validated, setValidated] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -41,6 +42,20 @@ export default function Auth() {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  // Fetch Google Client ID from backend at runtime
+  useEffect(() => {
+    const fetchGoogleClientId = async () => {
+      try {
+        const res = await api.get('/api/auth/google/client-id');
+        setGoogleClientId(res.data.clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '82594612458-dummy.apps.googleusercontent.com');
+      } catch (err) {
+        console.error('Failed to load Google Client ID:', err);
+        setGoogleClientId(import.meta.env.VITE_GOOGLE_CLIENT_ID || '82594612458-dummy.apps.googleusercontent.com');
+      }
+    };
+    fetchGoogleClientId();
+  }, []);
 
   // Sync tab from URL path / search parameter change
   useEffect(() => {
@@ -157,10 +172,12 @@ export default function Auth() {
   };
 
   useEffect(() => {
+    if (!googleClientId) return;
+
     const initializeGoogleSignIn = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '82594612458-dummy.apps.googleusercontent.com',
+          client_id: googleClientId,
           callback: handleGoogleCallback
         });
         const btnContainer = document.getElementById('google-signin-button');
@@ -189,7 +206,7 @@ export default function Auth() {
       }, 100);
       return () => clearInterval(checkScript);
     }
-  }, [activeTab]);
+  }, [googleClientId, activeTab]);
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
